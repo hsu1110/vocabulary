@@ -1,0 +1,682 @@
+<template>
+  <div class="quiz-container">
+    <!-- Config Panel (Before Quiz Starts) -->
+    <div v-if="quizState === 'setup'" class="setup-panel glass-container">
+      <h3 class="setup-title">
+        <el-icon><Postcard /></el-icon> 小考測驗設定
+      </h3>
+      
+      <el-form label-position="top">
+        <!-- 1. Select Range Type -->
+        <el-form-item label="1. 選擇測驗範圍">
+          <el-radio-group v-model="rangeType" class="quiz-radio-group">
+            <el-radio-button value="all">全書範圍</el-radio-button>
+            <el-radio-button value="chapter">指定 Part / 章節</el-radio-button>
+            <el-radio-button value="wrong" :disabled="!hasWrongWords">
+              僅錯字本 (目前共 {{ wrongWordsCount }} 字)
+            </el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+
+        <!-- 2. Show Cascader if Chapter range is selected -->
+        <el-form-item v-if="rangeType === 'chapter'" label="請選擇章節">
+          <el-cascader
+            v-model="selectedRange"
+            :options="cascaderOptions"
+            :props="{ expandTrigger: 'hover' }"
+            placeholder="請選擇 Part / 章節"
+            style="width: 100%;"
+          />
+        </el-form-item>
+
+        <!-- 3. Question Count -->
+        <el-form-item label="2. 選擇測驗題數">
+          <el-input-number
+            v-model="questionCount"
+            :min="5"
+            :max="maxAvailableQuestions"
+            :step="5"
+            controls-position="right"
+            style="width: 150px;"
+          />
+          <span class="max-hint text-muted">
+            (此範圍最多可測驗 {{ maxAvailableQuestions }} 題)
+          </span>
+        </el-form-item>
+
+        <!-- 4. Start Button -->
+        <el-form-item style="margin-top: 32px;">
+          <el-button
+            class="btn-primary-neon"
+            size="large"
+            style="width: 100%; font-size: 18px; height: 50px;"
+            :disabled="!isSetupValid"
+            @click="startQuiz"
+          >
+            開始測驗
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
+    <!-- Active Quiz Page -->
+    <div v-else-if="quizState === 'active'" class="active-quiz">
+      <!-- Header / Progress -->
+      <div class="quiz-header-bar glass-container">
+        <div class="progress-info">
+          <span class="progress-text">題數: {{ currentQuestionIdx + 1 }} / {{ questions.length }}</span>
+          <span class="score-text">答對: {{ score }}</span>
+        </div>
+        <el-progress
+          :percentage="Math.round(((currentQuestionIdx) / questions.length) * 100)"
+          :stroke-width="8"
+          :color="customColors"
+          style="width: 100%; margin-top: 10px;"
+        />
+      </div>
+
+      <!-- Question Box -->
+      <div class="question-box glass-container">
+        <span class="question-hint">請問以下單字的意思是？</span>
+        <div class="question-word">{{ currentQuestion.word }}</div>
+        <div v-if="hasAnswered" class="question-phonetic">
+          {{ currentQuestion.phonetic }}
+          <el-button
+            circle
+            class="btn-accent-glass"
+            size="small"
+            :icon="Headset"
+            style="margin-left: 8px;"
+            @click.stop="speakWord(currentQuestion.word)"
+          />
+        </div>
+      </div>
+
+      <!-- Options -->
+      <div class="options-container">
+        <button
+          v-for="opt in currentOptions"
+          :key="opt.id"
+          class="option-btn"
+          :class="getOptionClass(opt.id)"
+          :disabled="hasAnswered"
+          @click="selectOption(opt.id)"
+        >
+          <span class="option-label">{{ opt.label }}</span>
+          <span class="option-text">{{ opt.definition }}</span>
+        </button>
+      </div>
+
+      <!-- Footer / Next Button -->
+      <div class="quiz-footer">
+        <el-button
+          v-if="hasAnswered"
+          size="large"
+          class="btn-primary-neon next-btn"
+          @click="nextQuestion"
+        >
+          {{ currentQuestionIdx === questions.length - 1 ? '查看測驗結果' : '下一題' }}
+          <el-icon><ArrowRight /></el-icon>
+        </el-button>
+      </div>
+    </div>
+
+    <!-- Results Page -->
+    <div v-else-if="quizState === 'result'" class="result-page glass-container">
+      <div class="result-header">
+        <div class="result-score-circle">
+          <span class="score-number">{{ Math.round((score / questions.length) * 100) }}%</span>
+          <span class="score-label">分數</span>
+        </div>
+        <h3 class="result-title">測驗結束！</h3>
+        <p class="result-desc">您答對了 {{ score }} 題，共 {{ questions.length }} 題。</p>
+      </div>
+
+      <!-- Wrong Words Summary -->
+      <div v-if="wrongAnswers.length" class="wrong-summary">
+        <h4 class="summary-title text-danger">答錯單字清單 (已自動記入錯字本)：</h4>
+        <el-table :data="wrongAnswers" style="width: 100%; border-radius: 8px;">
+          <el-table-column prop="word" label="單字" width="150">
+            <template #default="scope">
+              <span class="wrong-word-link" @click="speakWord(scope.row.word)">
+                {{ scope.row.word }} <el-icon><Headset /></el-icon>
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="definition" label="中文解釋" />
+          <el-table-column label="您的回答">
+            <template #default="scope">
+              <span class="text-danger">{{ scope.row.yourAnswer }}</span>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+      <div v-else class="perfect-score text-success">
+        <el-icon size="40"><Trophy /></el-icon>
+        <h4>太棒了！全部答對！</h4>
+      </div>
+
+      <!-- Actions -->
+      <div class="result-actions">
+        <el-button class="btn-primary-neon" size="large" @click="restartSetup">
+          重新設定測驗
+        </el-button>
+        <el-button class="btn-secondary-glass" size="large" @click="$emit('switch-tab', 'study')">
+          回到背單字模式
+        </el-button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { Postcard, Headset, ArrowRight, Trophy } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+
+const props = defineProps({
+  vocabularyData: {
+    type: Array,
+    required: true
+  }
+})
+
+const emit = defineEmits(['switch-tab'])
+
+// Quiz states: 'setup', 'active', 'result'
+const quizState = ref('setup')
+
+// Setup values
+const rangeType = ref('all') // 'all', 'chapter', 'wrong'
+const selectedRange = ref([]) // [part_id, chapter_name]
+const questionCount = ref(20)
+
+// Quiz Active State
+const questions = ref([])
+const currentQuestionIdx = ref(0)
+const currentOptions = ref([])
+const selectedAnswerId = ref(null) // ID of chosen option
+const hasAnswered = ref(false)
+const score = ref(0)
+
+// Wrong answers tracked in this quiz session for result view
+const wrongAnswers = ref([])
+
+// Helper definitions for local storage wrong words
+const wrongWordsLocal = ref([])
+const hasWrongWords = computed(() => wrongWordsLocal.value.length > 0)
+const wrongWordsCount = computed(() => wrongWordsLocal.value.length)
+
+// Compute all flat words under current range
+const availableWordsList = computed(() => {
+  if (rangeType.value === 'all') {
+    const list = []
+    props.vocabularyData.forEach(p => {
+      p.chapters.forEach(c => {
+        c.words.forEach(w => list.push(w))
+      })
+    })
+    return list
+  } else if (rangeType.value === 'chapter') {
+    if (selectedRange.value.length < 2) return []
+    const [partId, chapterName] = selectedRange.value
+    const part = props.vocabularyData.find(p => p.part_id === partId)
+    if (!part) return []
+    const chapter = part.chapters.find(c => c.chapter_name === chapterName)
+    return chapter ? chapter.words : []
+  } else if (rangeType.value === 'wrong') {
+    const list = []
+    const wrongIds = wrongWordsLocal.value.map(item => item.id)
+    props.vocabularyData.forEach(p => {
+      p.chapters.forEach(c => {
+        c.words.forEach(w => {
+          if (wrongIds.includes(w.id)) {
+            list.push(w)
+          }
+        })
+      })
+    })
+    return list
+  }
+  return []
+})
+
+const maxAvailableQuestions = computed(() => {
+  return Math.max(5, availableWordsList.value.length)
+})
+
+const isSetupValid = computed(() => {
+  if (rangeType.value === 'chapter') {
+    return selectedRange.value.length === 2
+  }
+  if (rangeType.value === 'wrong') {
+    return hasWrongWords.value
+  }
+  return true
+})
+
+// Current question data
+const currentQuestion = computed(() => {
+  if (currentQuestionIdx.value >= questions.value.length) return {}
+  return questions.value[currentQuestionIdx.value]
+})
+
+// Generate options for cascade selection
+const cascaderOptions = computed(() => {
+  return props.vocabularyData.map(part => {
+    return {
+      value: part.part_id,
+      label: part.part_name,
+      children: part.chapters.map(ch => ({
+        value: ch.chapter_name,
+        label: ch.chapter_name
+      }))
+    }
+  })
+})
+
+// Shuffle helper (Fisher-Yates)
+const shuffle = (array) => {
+  const arr = [...array]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
+// Start the Quiz
+const startQuiz = () => {
+  const pool = availableWordsList.value
+  if (pool.length < 5) {
+    ElMessage.error('測驗範圍內單字數量太少（少於 5 個），無法開始小考。')
+    return
+  }
+  
+  // Clean last results
+  wrongAnswers.value = []
+  score.value = 0
+  currentQuestionIdx.value = 0
+  
+  // Pick N random words for questions
+  const shuffledPool = shuffle(pool)
+  const count = Math.min(questionCount.value, shuffledPool.length)
+  questions.value = shuffledPool.slice(0, count)
+  
+  // Load options for the first question
+  setupOptions()
+  
+  quizState.value = 'active'
+}
+
+// Set up 4 options for current question
+const setupOptions = () => {
+  hasAnswered.value = false
+  selectedAnswerId.value = null
+  
+  const correctWord = currentQuestion.value
+  
+  // Draw distractors from all vocabulary database to ensure diversity
+  const allWords = []
+  props.vocabularyData.forEach(p => {
+    p.chapters.forEach(c => {
+      c.words.forEach(w => {
+        if (w.id !== correctWord.id) {
+          allWords.push(w)
+        }
+      })
+    })
+  })
+  
+  const shuffledAll = shuffle(allWords)
+  const distractors = shuffledAll.slice(0, 3)
+  
+  // Create option list
+  const opts = [
+    { id: correctWord.id, label: 'A', definition: correctWord.definition, isCorrect: true },
+    { id: distractors[0].id, label: 'B', definition: distractors[0].definition, isCorrect: false },
+    { id: distractors[1].id, label: 'C', definition: distractors[1].definition, isCorrect: false },
+    { id: distractors[2].id, label: 'D', definition: distractors[2].definition, isCorrect: false }
+  ]
+  
+  // Shuffle options, then assign labels A, B, C, D
+  const shuffledOpts = shuffle(opts)
+  shuffledOpts.forEach((o, index) => {
+    o.label = String.fromCharCode(65 + index) // A, B, C, D
+  })
+  
+  currentOptions.value = shuffledOpts
+}
+
+// User selects an option
+const selectOption = (optId) => {
+  if (hasAnswered.value) return
+  selectedAnswerId.value = optId
+  hasAnswered.value = true
+  
+  const isCorrect = (optId === currentQuestion.value.id)
+  
+  if (isCorrect) {
+    score.value++
+  } else {
+    // Answer is incorrect, log details for end summary
+    const chosenOpt = currentOptions.value.find(o => o.id === optId)
+    wrongAnswers.value.push({
+      word: currentQuestion.value.word,
+      definition: currentQuestion.value.definition,
+      yourAnswer: chosenOpt ? `(${chosenOpt.label}) ${chosenOpt.definition}` : '無回答'
+    })
+    
+    // Log word ID to LocalStorage wrong pool
+    logWrongWord(currentQuestion.value.id)
+  }
+}
+
+const getOptionClass = (optId) => {
+  if (!hasAnswered.value) return ''
+  
+  const isCorrect = (optId === currentQuestion.value.id)
+  const isSelected = (optId === selectedAnswerId.value)
+  
+  if (isCorrect) return 'correct'
+  if (isSelected && !isCorrect) return 'wrong'
+  return ''
+}
+
+const nextQuestion = () => {
+  if (currentQuestionIdx.value < questions.value.length - 1) {
+    currentQuestionIdx.value++
+    setupOptions()
+  } else {
+    // End of quiz, show result screen
+    quizState.value = 'result'
+    // Reload local storage count
+    loadWrongWordsLocal()
+  }
+}
+
+// Log wrong answers to LocalStorage
+const logWrongWord = (wordId) => {
+  const saved = localStorage.getItem('vocabulary_wrong_words')
+  let wrongList = []
+  if (saved) {
+    try {
+      wrongList = JSON.parse(saved)
+    } catch (e) {
+      console.error('Failed to parse wrong words pool', e)
+    }
+  }
+  
+  const existing = wrongList.find(item => item.id === wordId)
+  if (existing) {
+    existing.count = (existing.count || 1) + 1
+    existing.box = 1 // Reset to Box 1 on wrong answer in quiz
+    existing.timestamp = Date.now()
+  } else {
+    wrongList.push({ id: wordId, count: 1, box: 1, timestamp: Date.now() })
+  }
+  localStorage.setItem('vocabulary_wrong_words', JSON.stringify(wrongList))
+}
+
+const restartSetup = () => {
+  quizState.value = 'setup'
+}
+
+const speakWord = (word) => {
+  if (!word) return
+  const cleanWord = word.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim()
+  const audioUrl = `https://dict.youdao.com/dictvoice?type=2&audio=${encodeURIComponent(cleanWord)}`
+  const audio = new Audio(audioUrl)
+  
+  let fallbackExecuted = false
+  const runFallback = () => {
+    if (fallbackExecuted) return
+    fallbackExecuted = true
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+      const utterance = new SpeechSynthesisUtterance(cleanWord)
+      utterance.lang = 'en-US'
+      utterance.rate = 0.95
+      window.speechSynthesis.speak(utterance)
+    } else {
+      ElMessage.warning('您的裝置不支援語音發音。')
+    }
+  }
+
+  audio.play().catch(err => {
+    console.warn('Youdao TTS failed, fallback to native TTS', err)
+    runFallback()
+  })
+
+  setTimeout(() => {
+    if (audio.paused && !fallbackExecuted) {
+      console.warn('Youdao TTS timeout, fallback to native TTS')
+      runFallback()
+    }
+  }, 800)
+}
+
+const loadWrongWordsLocal = () => {
+  const saved = localStorage.getItem('vocabulary_wrong_words')
+  if (saved) {
+    try {
+      wrongWordsLocal.value = JSON.parse(saved)
+    } catch(e) {}
+  }
+}
+
+const customColors = [
+  { color: '#ef4444', percentage: 20 },
+  { color: '#f59e0b', percentage: 40 },
+  { color: '#eab308', percentage: 60 },
+  { color: '#3b82f6', percentage: 80 },
+  { color: '#10b981', percentage: 100 }
+]
+
+onMounted(() => {
+  loadWrongWordsLocal()
+})
+</script>
+
+<style scoped>
+.quiz-container {
+  width: 100%;
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+.setup-panel {
+  padding: 32px;
+}
+
+.setup-title {
+  margin-top: 0;
+  margin-bottom: 24px;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.quiz-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.max-hint {
+  margin-left: 12px;
+  font-size: 13px;
+}
+
+.quiz-header-bar {
+  padding: 16px 24px;
+  margin-bottom: 20px;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.question-box {
+  padding: 32px 24px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.question-hint {
+  font-size: 14px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.question-word {
+  font-family: 'Outfit', sans-serif;
+  font-size: 38px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.question-phonetic {
+  font-size: 16px;
+  color: var(--text-highlight);
+  font-style: italic;
+  display: inline-flex;
+  align-items: center;
+}
+
+.options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.option-label {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-right: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.option-text {
+  font-size: 16px;
+}
+
+.quiz-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.next-btn {
+  height: 48px !important;
+  font-size: 16px !important;
+  padding: 0 28px !important;
+}
+
+/* Result Styling */
+.result-page {
+  padding: 40px 32px;
+  text-align: center;
+}
+
+.result-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.result-score-circle {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  border: 4px solid var(--primary-color);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  background: rgba(99, 102, 241, 0.05);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+}
+
+.score-number {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.score-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.result-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.result-desc {
+  font-size: 16px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.wrong-summary {
+  text-align: left;
+  margin-bottom: 32px;
+}
+
+.summary-title {
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.wrong-word-link {
+  font-weight: 700;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wrong-word-link:hover {
+  color: var(--primary-color);
+}
+
+.perfect-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.perfect-score h4 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.result-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+</style>

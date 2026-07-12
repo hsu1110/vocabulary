@@ -1,0 +1,416 @@
+/* 全域設計系統與變數 */
+:root {
+  /* 配色系統 (Obsidian Dark Theme) */
+  --bg-main: #0b0f19;
+  --bg-gradient: linear-gradient(135deg, #0b0f19 0%, #111827 100%);
+  --bg-card: rgba(22, 28, 45, 0.7);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(99, 102, 241, 0.4);
+  
+  --primary-color: #6366f1; /* 霓虹紫靛 */
+  --primary-glow: rgba(99, 102, 241, 0.3);
+  --accent-color: #06b6d4;  /* 霓虹青 */
+  --accent-glow: rgba(6, 182, 212, 0.3);
+  
+  --text-primary: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-highlight: #38bdf8;
+  
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  
+  --shadow-main: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --shadow-glow: 0 0 20px 2px rgba(99, 102, 241, 0.15);
+  
+  /* 字體 */
+  --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  
+  /* Element Plus 全域變數複寫 (強制套用自訂色彩) */
+  --el-color-primary: #6366f1 !important;
+  --el-color-primary-light-3: #818cf8 !important;
+  --el-color-primary-light-5: #a5b4fc !important;
+  --el-color-primary-light-7: #c7d2fe !important;
+  --el-color-primary-light-8: #e0e7ff !important;
+  --el-color-primary-light-9: #eef2ff !important;
+  --el-color-primary-dark-2: #4f46e5 !important;
+  
+  --el-color-success: #10b981 !important;
+  --el-color-danger: #ef4444 !important;
+  --el-color-warning: #f59e0b !important;
+
+  --el-bg-color: #0b0f19 !important;
+  --el-bg-color-overlay: #161c2d !important;
+  --el-border-color: rgba(255, 255, 255, 0.08) !important;
+  --el-border-color-light: rgba(255, 255, 255, 0.05) !important;
+  
+  --el-text-color-primary: #f8fafc !important;
+  --el-text-color-regular: #94a3b8 !important;
+  --el-text-color-placeholder: rgba(255, 255, 255, 0.35) !important;
+  
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-main);
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg-gradient);
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+/* 滾動條樣式優化 */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color);
+}
+
+/* 毛玻璃容器 (Glassmorphism) */
+.glass-container {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: var(--shadow-main);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-container:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-main), var(--shadow-glow);
+}
+
+/* App 主要容器佈局 */
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-wrapper {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px;
+  box-sizing: border-box;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 頂部標題與導覽美化 */
+.header-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 16px 24px;
+  border-radius: 16px;
+}
+
+.brand-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  background: linear-gradient(to right, #6366f1, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 3D 閃卡元件樣式 */
+.flashcard-wrapper {
+  perspective: 1500px;
+  width: 100%;
+  max-width: 550px;
+  height: 380px;
+  margin: 0 auto;
+  cursor: pointer;
+}
+
+.flashcard {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-main);
+  border-radius: 20px;
+}
+
+/* 卡片翻轉觸發 */
+.flashcard.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  padding: 32px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.card-front {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.9) 100%);
+  color: var(--text-primary);
+}
+
+.card-back {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.75) 100%);
+  transform: rotateY(180deg);
+  color: var(--text-primary);
+}
+
+/* 卡片文字與排版 */
+.card-word {
+  font-family: 'Outfit', sans-serif;
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin-bottom: 8px;
+  text-align: center;
+  color: var(--text-primary);
+  text-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+}
+
+.card-phonetic {
+  font-size: 18px;
+  color: var(--text-highlight);
+  font-style: italic;
+  margin-bottom: 16px;
+}
+
+.card-structure {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  letter-spacing: 1px;
+}
+
+.card-meaning {
+  font-size: 26px;
+  font-weight: 600;
+  color: #38bdf8;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.card-literal {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Element Plus 暗色系樣式覆寫 */
+.el-menu {
+  border-bottom: none !important;
+  background-color: transparent !important;
+}
+
+.el-menu-item {
+  color: var(--text-muted) !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  border-radius: 8px;
+  margin: 0 4px;
+}
+
+.el-menu-item.is-active {
+  color: var(--text-primary) !important;
+  background-color: rgba(99, 102, 241, 0.15) !important;
+  border-bottom: none !important;
+}
+
+.el-button--primary {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.el-button--primary:hover {
+  background-color: #4f46e5 !important;
+  border-color: #4f46e5 !important;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+}
+
+.el-card {
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+  border-radius: 12px !important;
+}
+
+.el-cascader, .el-select, .el-input__wrapper {
+  background-color: rgba(15, 23, 42, 0.6) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: none !important;
+  color: var(--text-primary) !important;
+}
+
+.el-input__inner {
+  color: var(--text-primary) !important;
+}
+
+/* 測驗模式樣式 */
+.option-btn {
+  width: 100%;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  text-align: left;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  cursor: pointer;
+  outline: none;
+}
+
+.option-btn:hover {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+}
+
+.option-btn.correct {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: var(--success) !important;
+  color: #a7f3d0 !important;
+}
+
+.option-btn.wrong {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: var(--danger) !important;
+  color: #fca5a5 !important;
+}
+
+/* 響應式排版修正 */
+@media (max-width: 768px) {
+  .header-nav {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+  }
+  .app-wrapper {
+    padding: 16px;
+  }
+  .flashcard-wrapper {
+    height: 320px;
+  }
+  .card-word {
+    font-size: 32px;
+  }
+}
+
+/* 全域自訂按鈕統一風格 */
+.btn-primary-neon {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 4px 12px var(--primary-glow) !important;
+  border-radius: 10px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-weight: 600 !important;
+}
+
+.btn-primary-neon:hover:not(:disabled) {
+  background: #4f46e5 !important;
+  border-color: #4f46e5 !important;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.45) !important;
+  transform: translateY(-1.5px) !important;
+}
+
+.btn-secondary-glass {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+  border-radius: 10px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-weight: 500 !important;
+}
+
+.btn-secondary-glass:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: var(--text-muted) !important;
+  color: var(--text-primary) !important;
+  transform: translateY(-1.5px) !important;
+}
+
+.btn-accent-glass {
+  background: rgba(6, 182, 212, 0.05) !important;
+  border: 1px solid rgba(6, 182, 212, 0.2) !important;
+  color: var(--accent-color) !important;
+  border-radius: 10px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-weight: 600 !important;
+}
+
+.btn-accent-glass:hover:not(:disabled) {
+  background: rgba(6, 182, 212, 0.15) !important;
+  border-color: var(--accent-color) !important;
+  transform: translateY(-1.5px) !important;
+}
+
+.btn-danger-glass {
+  background: rgba(239, 68, 68, 0.05) !important;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  color: var(--danger) !important;
+  border-radius: 10px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-weight: 600 !important;
+}
+
+.btn-danger-glass:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: var(--danger) !important;
+  transform: translateY(-1.5px) !important;
+}
+
+.btn-success-glass {
+  background: rgba(16, 185, 129, 0.05) !important;
+  border: 1px solid rgba(16, 185, 129, 0.2) !important;
+  color: var(--success) !important;
+  border-radius: 10px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-weight: 600 !important;
+}
+
+.btn-success-glass:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: var(--success) !important;
+  transform: translateY(-1.5px) !important;
+}
+
