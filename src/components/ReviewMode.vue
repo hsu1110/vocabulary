@@ -206,7 +206,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['switch-tab'])
+const emit = defineEmits(['switch-tab', 'update-wrong-count'])
 
 // View Mode: 'list' or 'cards'
 const viewMode = ref('list')
@@ -272,6 +272,7 @@ const removeWrongWord = (wordId) => {
   const updated = wrongWordsList.value.filter(item => item.id !== wordId)
   wrongWordsList.value = updated
   localStorage.setItem('vocabulary_wrong_words', JSON.stringify(updated))
+  emit('update-wrong-count')
   ElMessage.success('已將該單字移出錯字本。')
   
   if (currentWordIndex.value >= updated.length && currentWordIndex.value > 0) {
@@ -307,9 +308,7 @@ const rateWord = (wordId, isCorrect) => {
     
     wrongWordsList.value = updated
     localStorage.setItem('vocabulary_wrong_words', JSON.stringify(updated))
-    
-    // Sync wrond count badge instantly
-    window.dispatchEvent(new Event('storage'))
+    emit('update-wrong-count')
     
     // Auto advance if not last
     if (currentWordIndex.value >= updated.length && currentWordIndex.value > 0) {
@@ -330,6 +329,7 @@ const clearAllWrong = () => {
   ).then(() => {
     wrongWordsList.value = []
     localStorage.removeItem('vocabulary_wrong_words')
+    emit('update-wrong-count')
     ElMessage.success('已成功清空錯字本。')
   }).catch(() => {})
 }

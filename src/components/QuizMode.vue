@@ -1,7 +1,7 @@
 <template>
   <div class="quiz-container">
     <!-- Config Panel (Before Quiz Starts) -->
-    <div v-if="quizState === 'setup'" class="setup-panel glass-container">
+    <div v-if="quizState === 'setup'" class="setup-panel">
       <h3 class="setup-title">
         <el-icon><Postcard /></el-icon> 小考測驗設定
       </h3>
@@ -122,7 +122,7 @@
     </div>
 
     <!-- Results Page -->
-    <div v-else-if="quizState === 'result'" class="result-page glass-container">
+    <div v-else-if="quizState === 'result'" class="result-page">
       <div class="result-header">
         <div class="result-score-circle">
           <span class="score-number">{{ Math.round((score / questions.length) * 100) }}%</span>
@@ -181,7 +181,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['switch-tab'])
+const emit = defineEmits(['switch-tab', 'update-wrong-count'])
 
 // Quiz states: 'setup', 'active', 'result'
 const quizState = ref('setup')
@@ -207,13 +207,17 @@ const wrongWordsLocal = ref([])
 const hasWrongWords = computed(() => wrongWordsLocal.value.length > 0)
 const wrongWordsCount = computed(() => wrongWordsLocal.value.length)
 
-// Compute all flat words under current range
+// Compute all flat words under current range (filtering out those with empty definitions)
 const availableWordsList = computed(() => {
   if (rangeType.value === 'all') {
     const list = []
     props.vocabularyData.forEach(p => {
       p.chapters.forEach(c => {
-        c.words.forEach(w => list.push(w))
+        c.words.forEach(w => {
+          if (w.definition && w.definition.trim()) {
+            list.push(w)
+          }
+        })
       })
     })
     return list
@@ -223,14 +227,14 @@ const availableWordsList = computed(() => {
     const part = props.vocabularyData.find(p => p.part_id === partId)
     if (!part) return []
     const chapter = part.chapters.find(c => c.chapter_name === chapterName)
-    return chapter ? chapter.words : []
+    return chapter ? chapter.words.filter(w => w.definition && w.definition.trim()) : []
   } else if (rangeType.value === 'wrong') {
     const list = []
     const wrongIds = wrongWordsLocal.value.map(item => item.id)
     props.vocabularyData.forEach(p => {
       p.chapters.forEach(c => {
         c.words.forEach(w => {
-          if (wrongIds.includes(w.id)) {
+          if (wrongIds.includes(w.id) && w.definition && w.definition.trim()) {
             list.push(w)
           }
         })
@@ -321,7 +325,7 @@ const setupOptions = () => {
   props.vocabularyData.forEach(p => {
     p.chapters.forEach(c => {
       c.words.forEach(w => {
-        if (w.id !== correctWord.id) {
+        if (w.id !== correctWord.id && w.definition && w.definition.trim()) {
           allWords.push(w)
         }
       })
@@ -416,6 +420,7 @@ const logWrongWord = (wordId) => {
     wrongList.push({ id: wordId, count: 1, box: 1, timestamp: Date.now() })
   }
   localStorage.setItem('vocabulary_wrong_words', JSON.stringify(wrongList))
+  emit('update-wrong-count')
 }
 
 const restartSetup = () => {
@@ -479,14 +484,34 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 容器：與 StudyMode / ReviewMode 一致，無特殊背景 */
 .quiz-container {
   width: 100%;
-  max-width: 650px;
   margin: 0 auto;
 }
 
+/* 設定面板：用 exam.jpg 作為裝飾背景的 glass 卡片 */
 .setup-panel {
   padding: 32px;
+  background:
+    linear-gradient(rgba(22, 28, 45, 0.55), rgba(22, 28, 45, 0.55)),
+    url('/exam.jpg') center 12% / cover no-repeat;
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-radius: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.setup-panel:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-main), var(--shadow-glow);
+}
+
+/* 進行中測驗：各子區塊獨立，不再用大面板包覆 */
+.active-quiz {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .setup-title {
@@ -514,7 +539,6 @@ onMounted(() => {
 
 .quiz-header-bar {
   padding: 16px 24px;
-  margin-bottom: 20px;
 }
 
 .progress-info {
@@ -528,7 +552,6 @@ onMounted(() => {
 .question-box {
   padding: 32px 24px;
   text-align: center;
-  margin-bottom: 24px;
 }
 
 .question-hint {
@@ -559,7 +582,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-bottom: 24px;
 }
 
 .option-label {
@@ -587,10 +609,24 @@ onMounted(() => {
   padding: 0 28px !important;
 }
 
-/* Result Styling */
+/* 結果頁面：同樣用 exam.jpg 裝飾背景 */
 .result-page {
   padding: 40px 32px;
   text-align: center;
+  background:
+    linear-gradient(rgba(22, 28, 45, 0.45), rgba(22, 28, 45, 0.45)),
+    url('/exam.jpg') top center / cover no-repeat;
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: var(--shadow-main);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.result-page:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-main), var(--shadow-glow);
 }
 
 .result-header {
@@ -680,3 +716,4 @@ onMounted(() => {
   gap: 16px;
 }
 </style>
+

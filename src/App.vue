@@ -3,8 +3,9 @@
     <!-- Header / Nav Bar -->
     <header class="header-nav glass-container">
       <div class="brand-title">
-        <el-icon><Reading /></el-icon>
-        <span>旋元佑英文字彙系統</span>
+        <img src="/gua1.png" class="brand-avatar" alt="gua1" />
+        <span>張晨晨考試加油！</span>
+        <img src="/gua2.png" class="brand-avatar" alt="gua3" />
       </div>
 
       <!-- Menu Navigation -->
@@ -61,6 +62,7 @@
           v-else-if="activeTab === 'quiz'"
           :vocabulary-data="vocabData"
           @switch-tab="handleSwitchTab"
+          @update-wrong-count="updateWrongCount"
         />
         <ReviewMode
           v-else-if="activeTab === 'review'"
@@ -73,7 +75,7 @@
 
     <!-- Footer -->
     <footer class="app-footer">
-      <p>旋元佑英文字彙學習網頁 © 2026. 靜態單頁離線字彙系統（進度自動儲存於本機）</p>
+      <p>英文字彙學習網頁 © 2026. 靜態單頁離線字彙系統（進度自動儲存於本機）</p>
     </footer>
   </div>
 </template>
@@ -147,6 +149,13 @@ onMounted(() => {
 </script>
 
 <style>
+.brand-avatar {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px var(--primary-glow));
+}
+
 /* CSS overrides or general app transitions */
 .main-content {
   flex-grow: 1;
