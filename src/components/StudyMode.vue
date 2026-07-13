@@ -1,42 +1,68 @@
 <template>
   <div class="study-container">
-    <!-- Chapter Cascader Selector & Fuzzy Search -->
-    <div class="selector-bar glass-container">
+    <!-- Chapter Selector & Fuzzy Search -->
+    <div class="unified-bar glass-container">
       <div class="selector-group">
         <div class="selector-label">
           <el-icon><Notebook /></el-icon>
           <span>學習範圍：</span>
         </div>
+        <!-- 電腦版：使用階層選擇器 -->
         <el-cascader
           v-model="selectedRange"
           :options="cascaderOptions"
           :props="{ expandTrigger: 'hover' }"
           placeholder="請選擇 Part / 章節"
           style="width: 280px;"
+          class="desktop-only"
           @change="handleRangeChange"
         />
+        <!-- 手機版：使用雙下拉選單，極好點選 -->
+        <div class="mobile-range-selects mobile-only">
+          <el-select
+            v-model="selectedPartId"
+            placeholder="選擇 Part"
+            @change="handlePartSelectChange"
+          >
+            <el-option
+              v-for="p in props.vocabularyData"
+              :key="p.part_id"
+              :label="p.part_name"
+              :value="p.part_id"
+            />
+          </el-select>
+          <el-select
+            v-model="selectedChapterName"
+            placeholder="選擇章節"
+            :disabled="!selectedPartId"
+            @change="handleChapterSelectChange"
+          >
+            <el-option
+              v-for="ch in availableChapters"
+              :key="ch"
+              :label="ch"
+              :value="ch"
+            />
+          </el-select>
+        </div>
       </div>
 
       <div class="search-group">
-        <el-select
-          v-model="selectedSearchWord"
-          filterable
+        <el-autocomplete
+          v-model="searchQuery"
+          :fetch-suggestions="querySearch"
           placeholder="🔍 搜尋單字或中文釋義..."
-          style="width: 260px;"
           clearable
-          value-key="id"
-          @change="handleSearchChange"
+          value-key="word"
+          @select="handleSearchSelect"
         >
-          <el-option
-            v-for="item in allWordsFlat"
-            :key="item.id"
-            :label="item.word"
-            :value="item"
-          >
-            <span class="search-opt-word">{{ item.word }}</span>
-            <span class="search-opt-def">{{ item.definition }}</span>
-          </el-option>
-        </el-select>
+          <template #default="{ item }">
+            <div class="search-opt-row" style="display: flex; justify-content: space-between;">
+              <span class="search-opt-word">{{ item.word }}</span>
+              <span class="search-opt-def">{{ item.definition }}</span>
+            </div>
+          </template>
+        </el-autocomplete>
       </div>
     </div>
 
@@ -48,7 +74,11 @@
     <!-- Study Cards Interface -->
     <div v-else class="cards-layout">
       <!-- Word Card (Unified, no flip) -->
-      <div class="word-info-card glass-container">
+      <div 
+        class="word-info-card glow-card swipe-transition"
+        @touchstart="handleTouchStart"
+        @touchend="handleTouchEnd"
+      >
         <!-- Header row (Word, Phonetic, Structure) -->
         <div class="card-header-row">
           <div class="card-word-title">{{ currentWord.word }}</div>
@@ -193,6 +223,65 @@ const props = defineProps({
 const selectedRange = ref([]) // [part_id, chapter_name]
 const currentWordIndex = ref(0)
 const selectedSearchWord = ref(null)
+
+// Two separate selects helper for mobile
+const selectedPartId = ref('')
+const selectedChapterName = ref('')
+
+// Initialize and watch selectedRange to sync with selectedPartId and selectedChapterName
+watch(selectedRange, (newRange) => {
+  if (newRange && newRange.length === 2) {
+    selectedPartId.value = newRange[0]
+    selectedChapterName.value = newRange[1]
+  } else {
+    selectedPartId.value = ''
+    selectedChapterName.value = ''
+  }
+}, { immediate: true })
+
+// Chapter options based on selectedPartId
+const availableChapters = computed(() => {
+  if (!selectedPartId.value) return []
+  const part = props.vocabularyData.find(p => p.part_id === selectedPartId.value)
+  return part ? part.chapters.map(c => c.chapter_name) : []
+})
+
+// Handlers for manual selection change
+const handlePartSelectChange = (val) => {
+  selectedPartId.value = val
+  const part = props.vocabularyData.find(p => p.part_id === val)
+  if (part && part.chapters.length > 0) {
+    selectedChapterName.value = part.chapters[0].chapter_name
+    selectedRange.value = [val, selectedChapterName.value]
+    handleRangeChange()
+  }
+}
+
+const handleChapterSelectChange = (val) => {
+  selectedChapterName.value = val
+  if (selectedPartId.value && val) {
+    selectedRange.value = [selectedPartId.value, val]
+    handleRangeChange()
+  }
+}
+
+// Autocomplete search
+const searchQuery = ref('')
+const querySearch = (queryString, cb) => {
+  const results = queryString
+    ? allWordsFlat.value.filter(item => {
+        return (
+          item.word.toLowerCase().includes(queryString.toLowerCase()) ||
+          item.definition.toLowerCase().includes(queryString.toLowerCase())
+        )
+      })
+    : []
+  cb(results.slice(0, 20))
+}
+const handleSearchSelect = (item) => {
+  handleSearchChange(item)
+  searchQuery.value = ''
+}
 
 // Flatten words for fuzzy search lookup
 const allWordsFlat = computed(() => {
@@ -360,6 +449,30 @@ const loadProgress = () => {
   }
 }
 
+const touchStartX = ref(0)
+const touchEndX = ref(0)
+
+const handleTouchStart = (e) => {
+  touchStartX.value = e.touches[0].clientX
+}
+
+const handleTouchEnd = (e) => {
+  touchEndX.value = e.changedTouches[0].clientX
+  handleSwipe()
+}
+
+const handleSwipe = () => {
+  const diffX = touchEndX.value - touchStartX.value
+  const threshold = 60
+  if (Math.abs(diffX) > threshold) {
+    if (diffX > 0) {
+      prevWord()
+    } else {
+      nextWord()
+    }
+  }
+}
+
 const handleKeyboard = (event) => {
   if (currentWords.value.length === 0) return
   if (event.key === 'ArrowLeft') {
@@ -423,7 +536,6 @@ watch(() => currentWordIndex.value, () => {
 /* Unified Info Card Styling */
 .word-info-card {
   padding: 32px;
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.9) 100%);
   display: flex;
   flex-direction: column;
   gap: 24px;

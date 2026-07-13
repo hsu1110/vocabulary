@@ -72,16 +72,39 @@ npm run dev
 
 啟動後，在瀏覽器打開 `http://localhost:5173/` 即可進行本地體驗。
 
-### 2. 生產環境編譯
+### 2. 生產環境與 GitHub Pages 部署
 
-如果您要進行生產部署，請執行以下指令打包：
+本專案已在 `vite.config.js` 設定為相對路徑 `base: './'`，支援以下幾種部署至 GitHub Pages 的方式：
 
-```bash
-# 進行生產打包
-npm run build
-```
+#### 方法 A：使用 GitHub Actions 自動化部署（最推薦，免安裝套件）
+1. 在 GitHub 專案頁面的 **Settings** ➔ **Pages**。
+2. 將 **Build and deployment** 下的 **Source** 更改為 **GitHub Actions**。
+3. 往後只要在本機執行 `git push` 將原始碼推送到 `main` 分支，GitHub 伺服器就會自動在雲端完成編譯與部署！
 
-打包後產生的 `dist/` 資料夾內所有檔案，可以直接部署至您的 **GitHub Pages** 服務中。
+#### 方法 B：使用 `docs` 資料夾部署（免安裝套件）
+1. 在 `vite.config.js` 中，將打包輸出路徑指向 `docs`：
+   ```javascript
+   export default defineConfig({
+     plugins: [vue()],
+     base: './',
+     build: {
+       outDir: 'docs'
+     }
+   })
+   ```
+2. 執行 `npm run build`，這會在專案根目錄下生成 `docs/` 資料夾。
+3. 將代碼推送到 `main` 分支。
+4. 至 GitHub Repository ➔ **Settings** ➔ **Pages**，Source 選擇 `Deploy from a branch`，分支選擇 `main`，資料夾選擇 `/docs` 存檔即可。
+
+#### 方法 C：使用 npx 免安裝一鍵部署
+1. 本機執行編譯：
+   ```bash
+   npm run build
+   ```
+2. 透過 `npx` 暫時載入發布工具（不需要在專案中安裝任何 `gh-pages` 依賴）：
+   ```bash
+   npx gh-pages -d dist
+   ```
 
 ### 3. 字彙庫解析與更新 (Python)
 

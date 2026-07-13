@@ -1,7 +1,7 @@
 <template>
   <div class="app-wrapper">
-    <!-- Header / Nav Bar -->
-    <header class="header-nav glass-container">
+    <!-- Header / Nav Bar (電腦版) -->
+    <header class="header-nav glass-container desktop-only">
       <div class="brand-title">
         <img src="/gua1.png" class="brand-avatar" alt="gua1" />
         <span>張晨晨考試加油！</span>
@@ -36,6 +36,15 @@
           </span>
         </el-menu-item>
       </el-menu>
+    </header>
+
+    <!-- Header (手機版：僅保留頂部 Logo 精簡列) -->
+    <header class="header-nav-mobile glass-container mobile-only">
+      <div class="brand-title-mobile">
+        <img src="/gua1.png" class="brand-avatar-mobile" alt="gua1" />
+        <span>晨晨考試加油！</span>
+        <img src="/gua2.png" class="brand-avatar-mobile" alt="gua2" />
+      </div>
     </header>
 
     <!-- Main Content Panel -->
@@ -73,8 +82,39 @@
       </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="app-footer">
+    <!-- 底部固定導覽列 (手機版專用) -->
+    <div class="mobile-bottom-nav glass-container mobile-only">
+      <div 
+        class="bottom-nav-item" 
+        :class="{ active: activeTab === 'study' }"
+        @click="handleSwitchTab('study')"
+      >
+        <el-icon><Notebook /></el-icon>
+        <span>背單字</span>
+      </div>
+      <div 
+        class="bottom-nav-item" 
+        :class="{ active: activeTab === 'quiz' }"
+        @click="handleSwitchTab('quiz')"
+      >
+        <el-icon><Postcard /></el-icon>
+        <span>單字小考</span>
+      </div>
+      <div 
+        class="bottom-nav-item" 
+        :class="{ active: activeTab === 'review' }"
+        @click="handleSwitchTab('review')"
+      >
+        <el-icon>
+          <Warning />
+          <span v-if="wrongCount > 0" class="mobile-badge-dot"></span>
+        </el-icon>
+        <span>錯字複習</span>
+      </div>
+    </div>
+
+    <!-- Footer (只在電腦端顯示) -->
+    <footer class="app-footer desktop-only">
       <p>英文字彙學習網頁 © 2026. 靜態單頁離線字彙系統（進度自動儲存於本機）</p>
     </footer>
   </div>

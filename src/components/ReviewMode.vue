@@ -12,7 +12,7 @@
     <!-- Review Content -->
     <div v-else class="review-content">
       <!-- Toolbar -->
-      <div class="toolbar glass-container">
+      <div class="unified-bar glass-container">
         <div class="toolbar-info">
           <el-icon><Warning /></el-icon>
           <span>目前共有 <strong>{{ wrongWordsDetails.length }}</strong> 個答錯的單字</span>
@@ -28,9 +28,9 @@
         </div>
       </div>
 
-      <!-- 1. List View Mode -->
-      <div v-if="viewMode === 'list'" class="list-view glass-container">
-        <el-table :data="wrongWordsDetails" style="width: 100%; border-radius: 12px;">
+      <!-- 1. List View Mode (電腦版) -->
+      <div v-if="viewMode === 'list'" class="list-view glow-card desktop-only" style="padding: 16px; border-radius: 20px;">
+        <el-table :data="wrongWordsDetails" style="width: 100%; background: transparent;">
           <el-table-column prop="word" label="單字" width="160">
             <template #default="scope">
               <span class="word-text" @click="speakWord(scope.row.word)">
@@ -58,9 +58,9 @@
           <el-table-column label="操作" width="140" align="center">
             <template #default="scope">
               <el-button
-                type="success"
-                link
+                class="btn-success-glass"
                 size="small"
+                style="padding: 4px 12px; font-size: 12px; height: auto; border-radius: 8px;"
                 @click="removeWrongWord(scope.row.id)"
               >
                 直接移出
@@ -70,22 +70,59 @@
         </el-table>
       </div>
 
+      <!-- 1. List View Mode (手機版卡片列表) -->
+      <div v-if="viewMode === 'list'" class="mobile-list-view mobile-only">
+        <div 
+          v-for="item in wrongWordsDetails" 
+          :key="item.id" 
+          class="mobile-word-card glow-card"
+        >
+          <div class="mobile-word-title">
+            <span @click="speakWord(item.word)" style="cursor: pointer;">
+              {{ item.word }} <el-icon style="margin-left: 4px; vertical-align: middle;"><Headset /></el-icon>
+            </span>
+            <el-button
+              class="btn-success-glass"
+              size="small"
+              style="padding: 4px 10px; font-size: 12px; height: auto; border-radius: 8px;"
+              @click="removeWrongWord(item.id)"
+            >
+              直接移出
+            </el-button>
+          </div>
+          <div class="card-word-phonetic" style="font-size: 14px; margin: 4px 0;">{{ item.phonetic }}</div>
+          <div class="mobile-word-def">{{ item.definition }}</div>
+          
+          <div class="mobile-word-meta">
+            <div class="mastery-indicator">
+              <span class="meta-label">掌握度</span>
+              <div class="pill-group">
+                <span class="indicator-pill active" :class="{ danger: item.box === 1, warning: item.box === 2, success: item.box >= 3 }"></span>
+                <span class="indicator-pill" :class="{ active: item.box >= 2, warning: item.box === 2, success: item.box >= 3 }"></span>
+                <span class="indicator-pill" :class="{ active: item.box >= 3, success: item.box >= 3 }"></span>
+              </div>
+            </div>
+            
+            <div class="error-indicator">
+              <span class="meta-label">錯誤次數</span>
+              <span class="error-count-tag" :class="{ high: item.count >= 3 }">
+                {{ item.count }} 次
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 2. Flashcard View Mode -->
       <div v-else-if="viewMode === 'cards'" class="cards-view">
         <!-- Word Card (Unified, no flip) -->
-        <div class="word-info-card glass-container">
-          <!-- Header row -->
+        <div 
+          class="word-info-card glow-card"
+          @touchstart="handleTouchStart"
+          @touchend="handleTouchEnd"
+        >
+          <!-- Header row (Unified style with StudyMode) -->
           <div class="card-header-row">
-            <div class="card-badge-group">
-              <span class="card-badge">錯字本 ({{ currentWordIndex + 1 }} / {{ wrongWordsDetails.length }})</span>
-              <el-tag
-                :type="currentWord.box === 2 ? 'warning' : (currentWord.box >= 3 ? 'success' : 'danger')"
-                effect="dark"
-                class="box-tag"
-              >
-                掌握度: {{ currentWord.box === 2 ? '66%' : (currentWord.box >= 3 ? '100%' : '33%') }} (Box {{ currentWord.box || 1 }})
-              </el-tag>
-            </div>
             <div class="card-word-title">
               {{ currentWord.word }}
               <el-button
@@ -100,6 +137,19 @@
             <div v-if="currentWord.structure" class="card-word-structure">
               {{ currentWord.structure }}
             </div>
+            <div class="card-meta-tags" style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+              <el-tag
+                :type="currentWord.box === 2 ? 'warning' : (currentWord.box >= 3 ? 'success' : 'danger')"
+                effect="dark"
+                class="box-tag"
+                style="border-radius: 12px; padding: 4px 10px; height: auto;"
+              >
+                掌握度: {{ currentWord.box === 2 ? '66%' : (currentWord.box >= 3 ? '100%' : '33%') }} (Box {{ currentWord.box || 1 }})
+              </el-tag>
+              <span class="card-badge" style="position: static; font-size: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); padding: 4px 10px; border-radius: 12px; color: var(--text-muted);">
+                {{ currentWordIndex + 1 }} / {{ wrongWordsDetails.length }}
+              </span>
+            </div>
           </div>
 
           <!-- Body -->
@@ -112,6 +162,14 @@
             <div v-if="currentWord.literal_meaning" class="literal-block">
               <span class="section-label">字源分析</span>
               <div class="literal-text">{{ currentWord.literal_meaning }}</div>
+            </div>
+
+            <div v-if="currentWord.examples && currentWord.examples.length" class="example-block" style="grid-column: span 2; border-top: 1px dashed rgba(255, 255, 255, 0.08); padding-top: 16px; margin-top: 4px;">
+              <span class="section-label">參考例句</span>
+              <div v-for="(ex, index) in currentWord.examples" :key="index" class="example-item" style="margin-bottom: 12px; border-left: 3px solid var(--accent-color); padding-left: 12px;">
+                <div class="example-en" style="font-size: 15px; color: var(--text-primary); line-height: 1.5; font-family: 'Outfit', sans-serif; font-weight: 500;">{{ ex.en }}</div>
+                <div class="example-zh" style="font-size: 14px; color: var(--text-muted); margin-top: 4px;">{{ ex.zh }}</div>
+              </div>
             </div>
           </div>
 
@@ -154,20 +212,12 @@
           </div>
         </div>
 
-        <!-- Navigation / Action for Cards -->
-        <div class="card-controls-row">
-          <el-button
-            :disabled="currentWordIndex === 0"
-            :icon="ArrowLeft"
-            class="btn-secondary-glass nav-btn-prev"
-            @click="prevCard"
-          >
-            上一個
-          </el-button>
-          
+        <!-- Navigation / Action for Cards (電腦版) -->
+        <div class="card-controls-row desktop-only" style="justify-content: center; gap: 24px; margin-top: 16px;">
           <el-button
             :icon="Close"
             class="btn-danger-glass nav-btn-wrong"
+            style="min-width: 180px; height: 48px;"
             @click="rateWord(currentWord.id, false)"
           >
             忘記了 (降為 Box 1)
@@ -176,17 +226,30 @@
           <el-button
             :icon="Check"
             class="btn-success-glass nav-btn-correct"
+            style="min-width: 180px; height: 48px;"
             @click="rateWord(currentWord.id, true)"
           >
             記住了 (+1 箱)
           </el-button>
+        </div>
 
+        <!-- Navigation / Action for Cards (手機版) -->
+        <div class="mobile-controls-grid mobile-only" style="display: flex; gap: 8px; width: 100%; margin-top: 16px;">
           <el-button
-            :disabled="currentWordIndex === wrongWordsDetails.length - 1"
-            class="btn-primary-neon nav-btn-next"
-            @click="nextCard"
+            :icon="Close"
+            class="btn-danger-glass"
+            style="flex: 1; height: 48px; font-weight: 600;"
+            @click="rateWord(currentWord.id, false)"
           >
-            下一個 <el-icon><ArrowRight /></el-icon>
+            忘記了
+          </el-button>
+          <el-button
+            :icon="Check"
+            class="btn-success-glass"
+            style="flex: 1; height: 48px; font-weight: 600;"
+            @click="rateWord(currentWord.id, true)"
+          >
+            記住了
           </el-button>
         </div>
       </div>
@@ -195,7 +258,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Warning, Headset, ArrowLeft, ArrowRight, Check, Close } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 
@@ -382,8 +445,48 @@ const nextCard = () => {
   }
 }
 
+// Touch swipe gestures for mobile card review
+const touchStartX = ref(0)
+const touchEndX = ref(0)
+
+const handleTouchStart = (e) => {
+  touchStartX.value = e.touches[0].clientX
+}
+
+const handleTouchEnd = (e) => {
+  touchEndX.value = e.changedTouches[0].clientX
+  handleSwipe()
+}
+
+const handleSwipe = () => {
+  const swipeThreshold = 50
+  const diff = touchEndX.value - touchStartX.value
+  if (Math.abs(diff) > swipeThreshold) {
+    if (diff > 0) {
+      prevCard()
+    } else {
+      nextCard()
+    }
+  }
+}
+
+const handleKeyDown = (e) => {
+  if (viewMode.value === 'cards') {
+    if (e.key === 'ArrowLeft') {
+      prevCard()
+    } else if (e.key === 'ArrowRight') {
+      nextCard()
+    }
+  }
+}
+
 onMounted(() => {
   loadWrongWords()
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
 })
 </script>
 
@@ -458,7 +561,6 @@ onMounted(() => {
 /* Unified Card (matching StudyMode) */
 .word-info-card {
   padding: 32px;
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.9) 100%);
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -635,6 +737,112 @@ onMounted(() => {
 .speak-inline-btn {
   margin-left: 12px;
   vertical-align: middle;
+}
+
+/* Mobile card list styling */
+.mobile-word-card {
+  padding: 20px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-main);
+  transition: all 0.25s ease;
+}
+
+.mobile-word-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Outfit', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+  padding-bottom: 8px;
+}
+
+.mobile-word-def {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent-color);
+  margin-top: 4px;
+}
+
+.mobile-word-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.mastery-indicator {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meta-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pill-group {
+  display: flex;
+  gap: 4px;
+}
+
+.indicator-pill {
+  width: 20px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  transition: all 0.3s ease;
+}
+
+.indicator-pill.active.danger {
+  background: var(--danger);
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+}
+
+.indicator-pill.active.warning {
+  background: var(--warning);
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+}
+
+.indicator-pill.active.success {
+  background: var(--success);
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+}
+
+.error-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.error-count-tag {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: var(--warning);
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.error-count-tag.high {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--danger);
 }
 
 @media (max-width: 768px) {

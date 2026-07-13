@@ -124,7 +124,7 @@ body {
 
 .brand-title {
   font-family: 'Outfit', sans-serif;
-  font-size: 24px;
+  font-size: 32px;
   font-weight: 800;
   background: linear-gradient(to right, #6366f1, #06b6d4);
   -webkit-background-clip: text;
@@ -132,6 +132,11 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.brand-avatar {
+  width: 60px !important;
+  height: 60px !important;
 }
 
 /* 3D 閃卡元件樣式 */
@@ -246,10 +251,22 @@ body {
   margin: 0 4px;
 }
 
+.el-menu-item:hover, .el-menu-item:focus, 
+.el-menu--horizontal .el-menu-item:not(.is-disabled):hover,
+.el-menu--horizontal .el-menu-item:not(.is-disabled):focus {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-primary) !important;
+}
+
 .el-menu-item.is-active {
   color: var(--text-primary) !important;
   background-color: rgba(99, 102, 241, 0.15) !important;
   border-bottom: none !important;
+}
+
+.el-menu-item.is-active:hover {
+  background-color: rgba(99, 102, 241, 0.25) !important;
+  color: var(--text-primary) !important;
 }
 
 .el-button--primary {
@@ -317,21 +334,240 @@ body {
   color: #fca5a5 !important;
 }
 
-/* 響應式排版修正 */
-@media (max-width: 768px) {
-  .header-nav {
-    flex-direction: column;
-    gap: 16px;
-    padding: 16px;
+/* 響應式排版與顯示隱藏工具 */
+@media (max-width: 767px) {
+  .desktop-only {
+    display: none !important;
   }
   .app-wrapper {
-    padding: 16px;
+    padding: 12px 12px 80px 12px !important; /* 行動端高度補償，防止被底部選單擋住 */
   }
-  .flashcard-wrapper {
-    height: 320px;
+}
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none !important;
   }
-  .card-word {
-    font-size: 32px;
+  .app-wrapper {
+    padding: 24px;
+  }
+}
+
+/* 霓虹邊框卡片風格統一 */
+.glow-card {
+  position: relative;
+  background: linear-gradient(135deg, rgba(22, 28, 45, 0.75) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-main), 0 0 25px rgba(99, 102, 241, 0.1) !important;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.glow-card:hover {
+  border-color: var(--border-hover) !important;
+  box-shadow: var(--shadow-main), var(--shadow-glow) !important;
+}
+
+.glow-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1.5px;
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.45), transparent);
+  z-index: 2;
+}
+
+/* 點擊微縮放回饋，增強手機觸控質感 */
+.option-btn, 
+.btn-primary-neon, 
+.btn-secondary-glass, 
+.btn-accent-glass, 
+.btn-danger-glass, 
+.btn-success-glass,
+.el-button {
+  transition: transform 0.1s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.option-btn:active, 
+.btn-primary-neon:active:not(:disabled), 
+.btn-secondary-glass:active:not(:disabled), 
+.btn-accent-glass:active:not(:disabled), 
+.btn-danger-glass:active:not(:disabled), 
+.btn-success-glass:active:not(:disabled),
+.el-button:active:not(.is-disabled) {
+  transform: scale(0.96) !important;
+}
+
+/* 左右滑動過渡動畫 */
+.swipe-transition {
+  transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
+}
+
+/* 手機版頂部精簡標題列 */
+.header-nav-mobile {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+}
+
+.brand-title-mobile {
+  font-family: 'Outfit', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  background: linear-gradient(to right, #6366f1, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-avatar-mobile {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+
+/* 手機端底部導覽列 */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: rgba(15, 23, 42, 0.85) !important;
+  border-top: 1px solid var(--border-color) !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: none !important;
+  border-radius: 20px 20px 0 0 !important;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 1000;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  flex: 1;
+  height: 100%;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.bottom-nav-item.active {
+  color: var(--primary-color);
+}
+
+.bottom-nav-item .el-icon {
+  font-size: 22px !important;
+  position: relative;
+}
+
+.mobile-badge-dot {
+  position: absolute;
+  top: -1px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background-color: var(--danger);
+  border-radius: 50%;
+  border: 1px solid #111827;
+}
+
+/* 卡片與選擇器面板風格統一（確保 StudyMode, ReviewMode 對齊） */
+.unified-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+}
+
+.selector-group {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.selector-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mobile-range-selects {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  width: 100%;
+  min-width: 250px;
+}
+
+/* Element Plus Option text wrapping to prevent clipping of long part/chapter titles */
+.el-select-dropdown__item {
+  white-space: normal !important;
+  height: auto !important;
+  line-height: 1.4 !important;
+  padding: 8px 12px !important;
+}
+
+.el-autocomplete-suggestion li {
+  white-space: normal !important;
+  height: auto !important;
+  line-height: 1.4 !important;
+  padding: 8px 12px !important;
+}
+
+@media (max-width: 767px) {
+  .unified-bar {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+    padding: 12px 16px;
+  }
+  
+  .selector-group {
+    flex-direction: column;
+    align-items: stretch !important;
+    width: 100%;
+    gap: 8px !important;
+  }
+  
+  .selector-label {
+    align-self: flex-start;
+    margin-bottom: 2px;
+  }
+  
+  .mobile-range-selects {
+    display: flex;
+    flex-direction: column;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  
+  .mobile-range-selects .el-select,
+  .search-group .el-autocomplete {
+    width: 100% !important;
+  }
+  
+  .search-group {
+    width: 100% !important;
+    margin-top: 4px;
   }
 }
 
@@ -394,8 +630,9 @@ body {
 }
 
 .btn-danger-glass:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.15) !important;
+  background: rgba(239, 68, 68, 0.2) !important;
   border-color: var(--danger) !important;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4) !important;
   transform: translateY(-1.5px) !important;
 }
 
@@ -409,8 +646,9 @@ body {
 }
 
 .btn-success-glass:hover:not(:disabled) {
-  background: rgba(16, 185, 129, 0.15) !important;
+  background: rgba(16, 185, 129, 0.2) !important;
   border-color: var(--success) !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4) !important;
   transform: translateY(-1.5px) !important;
 }
 

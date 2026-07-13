@@ -76,7 +76,7 @@
       </div>
 
       <!-- Question Box -->
-      <div class="question-box glass-container">
+      <div class="question-box glow-card">
         <span class="question-hint">請問以下單字的意思是？</span>
         <div class="question-word">{{ currentQuestion.word }}</div>
         <div v-if="hasAnswered" class="question-phonetic">
@@ -492,14 +492,27 @@ onMounted(() => {
 
 /* 設定面板：用 exam.jpg 作為裝飾背景的 glass 卡片 */
 .setup-panel {
+  position: relative;
+  overflow: hidden;
   padding: 32px;
   background:
     linear-gradient(rgba(22, 28, 45, 0.55), rgba(22, 28, 45, 0.55)),
     url('/exam.jpg') center 12% / cover no-repeat;
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  box-shadow: var(--shadow-main), 0 0 25px rgba(99, 102, 241, 0.1);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.setup-panel::before,
+.result-page::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1.5px;
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.45), transparent);
+  z-index: 2;
 }
 
 .setup-panel:hover {
@@ -611,6 +624,8 @@ onMounted(() => {
 
 /* 結果頁面：同樣用 exam.jpg 裝飾背景 */
 .result-page {
+  position: relative;
+  overflow: hidden;
   padding: 40px 32px;
   text-align: center;
   background:
@@ -619,8 +634,8 @@ onMounted(() => {
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
   border: 1px solid var(--border-color);
-  border-radius: 16px;
-  box-shadow: var(--shadow-main);
+  border-radius: 20px;
+  box-shadow: var(--shadow-main), 0 0 25px rgba(99, 102, 241, 0.1);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
