@@ -33,7 +33,7 @@
         <el-table :data="wrongWordsDetails" style="width: 100%; background: transparent;">
           <el-table-column prop="word" label="單字" width="160">
             <template #default="scope">
-              <span class="word-text" @click="speakWord(scope.row.word)">
+              <span class="word-text" @click="speakText(scope.row.word)">
                 {{ scope.row.word }} <el-icon><Headset /></el-icon>
               </span>
             </template>
@@ -90,7 +90,7 @@
           class="mobile-word-card glow-card"
         >
           <div class="mobile-word-title">
-            <span @click="speakWord(item.word)" style="cursor: pointer;">
+            <span @click="speakText(item.word)" style="cursor: pointer;">
               {{ item.word }} <el-icon style="margin-left: 4px; vertical-align: middle;"><Headset /></el-icon>
             </span>
             <el-button
@@ -335,6 +335,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Warning, Headset, ArrowLeft, ArrowRight, Check, Close, VideoPlay } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import { useTTS } from '../composables/useTTS.js'
 
 const props = defineProps({
   vocabularyData: {
@@ -417,40 +418,51 @@ const removeWrongWord = (wordId) => {
   }
 }
 
-const markLearned = (wordId) => {
-  removeWrongWord(wordId)
-}
+
 
 const rateWord = (wordId, isCorrect) => {
   let updated = [...wrongWordsList.value]
   const idx = updated.findIndex(item => item.id === wordId)
-  if (idx !== -1) {
-    const item = updated[idx]
-    if (isCorrect) {
-      const currentBox = item.box || 1
-      if (currentBox >= 3) {
-        updated.splice(idx, 1)
-        ElMessage.success(`🎉 恭喜！「${currentWord.value.word}」已熟記並畢業，自動移出錯字本！`)
-      } else {
-        item.box = currentBox + 1
-        item.timestamp = Date.now()
-        ElMessage.success(`記住了！「${currentWord.value.word}」已晉升至 Box ${item.box}`)
-      }
+  if (idx === -1) return
+
+  const item = updated[idx]
+  let wordRemoved = false
+
+  if (isCorrect) {
+    const currentBox = item.box || 1
+    if (currentBox >= 3) {
+      // 已精通，畢業移出錯字本
+      updated.splice(idx, 1)
+      wordRemoved = true
+      ElMessage.success(`🎉 恭喜！「${currentWord.value.word}」已熟記並畢業，自動移出錯字本！`)
     } else {
-      item.box = 1
-      item.count = (item.count || 1) + 1
+      item.box = currentBox + 1
       item.timestamp = Date.now()
-      ElMessage.warning(`忘記了！「${currentWord.value.word}」已退回 Box 1`)
+      ElMessage.success(`記住了！「${currentWord.value.word}」已晉升至 Box ${item.box}`)
     }
-    
-    wrongWordsList.value = updated
-    localStorage.setItem('vocabulary_wrong_words', JSON.stringify(updated))
-    emit('update-wrong-count')
-    
-    // 如果不是最後一個單字則自動前進
-    if (currentWordIndex.value >= updated.length && currentWordIndex.value > 0) {
+  } else {
+    item.box = 1
+    item.count = (item.count || 1) + 1
+    item.timestamp = Date.now()
+    ElMessage.warning(`忘記了！「${currentWord.value.word}」已退回 Box 1`)
+  }
+
+  wrongWordsList.value = updated
+  localStorage.setItem('vocabulary_wrong_words', JSON.stringify(updated))
+  emit('update-wrong-count')
+
+  // 評分後自動前進到下一張
+  if (updated.length === 0) {
+    currentWordIndex.value = 0
+  } else if (wordRemoved) {
+    // 單字移出後，splice 已讓後續單字前移，index 不越界則不需調整
+    if (currentWordIndex.value >= updated.length) {
       currentWordIndex.value = updated.length - 1
     }
+  } else {
+    // 正常評分，跳到下一張；已到最後則回到第一張
+    const nextIdx = currentWordIndex.value + 1
+    currentWordIndex.value = nextIdx < updated.length ? nextIdx : 0
   }
 }
 
@@ -471,47 +483,8 @@ const clearAllWrong = () => {
   }).catch(() => {})
 }
 
-// 語音朗讀播放功能 (文字轉語音)
-const speakText = (text) => {
-  if (!text) return
-  let cleanText = text.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim()
-  const audioUrl = `https://dict.youdao.com/dictvoice?type=2&audio=${encodeURIComponent(cleanText)}`
-  const audio = new Audio(audioUrl)
-  
-  let fallbackExecuted = false
-  const runFallback = () => {
-    if (fallbackExecuted) return
-    fallbackExecuted = true
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel()
-      const utterance = new SpeechSynthesisUtterance(cleanText)
-      utterance.lang = 'en-US'
-      utterance.rate = 0.9
-      const voices = window.speechSynthesis.getVoices()
-      const engVoice = voices.find(v => v.lang.includes('en') || v.lang.includes('EN'))
-      if (engVoice) utterance.voice = engVoice
-      window.speechSynthesis.speak(utterance)
-    } else {
-      ElMessage.warning('您的裝置不支援語音朗讀功能。')
-    }
-  }
-
-  audio.play().catch(err => {
-    console.warn('有道語音播放失敗，改用系統原生語音', err)
-    runFallback()
-  })
-
-  setTimeout(() => {
-    if (audio.paused && !fallbackExecuted) {
-      console.warn('有道語音超時，改用系統原生語音')
-      runFallback()
-    }
-  }, 800)
-}
-
-const speakWord = (word) => {
-  speakText(word)
-}
+// 使用共用 TTS composable
+const { speakText } = useTTS()
 
 // 卡片切換導覽
 const prevCard = () => {

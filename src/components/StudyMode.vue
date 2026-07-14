@@ -248,9 +248,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Headset, VideoPlay, Notebook, ArrowLeft, ArrowRight, Compass, Collection } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { useTTS } from '../composables/useTTS.js'
 
 const props = defineProps({
   vocabularyData: {
@@ -262,7 +263,6 @@ const props = defineProps({
 // Ranges and indexing
 const selectedRange = ref([]) // [part_id, chapter_name]
 const currentWordIndex = ref(0)
-const selectedSearchWord = ref(null)
 
 // Two separate selects helper for mobile
 const selectedPartId = ref('')
@@ -352,23 +352,10 @@ const handleSearchChange = (item) => {
       currentWordIndex.value = idx
       saveProgress()
     }
-    selectedSearchWord.value = null
   }, 50)
 }
 
-// Generate options for cascade selection
-const cascaderOptions = computed(() => {
-  return props.vocabularyData.map(part => {
-    return {
-      value: part.part_id,
-      label: part.part_name,
-      children: part.chapters.map(ch => ({
-        value: ch.chapter_name,
-        label: ch.chapter_name
-      }))
-    }
-  })
-})
+
 
 // Get current words list in selected chapter
 const currentWords = computed(() => {
@@ -416,48 +403,8 @@ const nextWord = () => {
   }
 }
 
-// TTS Text-To-Speech function
-const speakText = (text) => {
-  if (!text) return
-  let cleanText = text.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim()
-  
-  // Clean special symbols but keep normal english words
-  const audioUrl = `https://dict.youdao.com/dictvoice?type=2&audio=${encodeURIComponent(cleanText)}`
-  const audio = new Audio(audioUrl)
-  
-  // Set play timeout fallback to speechSynthesis in case network is down
-  let fallbackExecuted = false
-  const runFallback = () => {
-    if (fallbackExecuted) return
-    fallbackExecuted = true
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel()
-      const utterance = new SpeechSynthesisUtterance(cleanText)
-      utterance.lang = 'en-US'
-      utterance.rate = 0.9
-      const voices = window.speechSynthesis.getVoices()
-      const engVoice = voices.find(v => v.lang.includes('en') || v.lang.includes('EN'))
-      if (engVoice) utterance.voice = engVoice
-      window.speechSynthesis.speak(utterance)
-    } else {
-      ElMessage.warning('您的裝置不支援語音朗讀功能。')
-    }
-  }
-
-  // Fallback if audio fails to play
-  audio.play().catch(err => {
-    console.warn('Youdao TTS play failed, fallback to native TTS', err)
-    runFallback()
-  })
-
-  // Safe timeout: if audio has not played in 800ms (network issue), fallback
-  setTimeout(() => {
-    if (audio.paused && !fallbackExecuted) {
-      console.warn('Youdao TTS timed out, fallback to native TTS')
-      runFallback()
-    }
-  }, 800)
-}
+// 使用共用 TTS composable
+const { speakText } = useTTS()
 
 // Progress memory functions
 const saveProgress = () => {
@@ -535,10 +482,15 @@ const handleKeyboard = (event) => {
 
 onMounted(() => {
   loadProgress()
+  // 預先載入語音清單（非同步，讓 TTS fallback 更快找到英語語音）
   if ('speechSynthesis' in window) {
     window.speechSynthesis.getVoices()
   }
   window.addEventListener('keydown', handleKeyboard)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyboard)
 })
 
 watch(() => currentWordIndex.value, () => {

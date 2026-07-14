@@ -2,85 +2,88 @@
   <div class="quiz-container">
     <!-- Config Panel (Before Quiz Starts) -->
     <div v-if="quizState === 'setup'" class="setup-panel">
-      <h3 class="setup-title">
-        <el-icon><Postcard /></el-icon> 小考測驗設定
-      </h3>
-      
-      <el-form label-position="top">
-        <!-- 1. Select Range Type -->
-        <el-form-item label="1. 選擇測驗範圍">
-          <el-radio-group v-model="rangeType" class="quiz-radio-group">
-            <el-radio-button value="all">全書範圍</el-radio-button>
-            <el-radio-button value="chapter">指定 Part / 章節</el-radio-button>
-            <el-radio-button value="wrong" :disabled="!hasWrongWords">
-              僅錯字本 (目前共 {{ wrongWordsCount }} 字)
-            </el-radio-button>
-          </el-radio-group>
-        </el-form-item>
+      <!-- 左側表單區塊，右側讓背景圖呼吸 -->
+      <div class="setup-inner">
+        <h3 class="setup-title">
+          <el-icon><Postcard /></el-icon> 小考測驗設定
+        </h3>
+        
+        <el-form label-position="top">
+          <!-- 1. Select Range Type -->
+          <el-form-item label="1. 選擇測驗範圍">
+            <el-radio-group v-model="rangeType" class="quiz-radio-group">
+              <el-radio-button value="all">全書範圍</el-radio-button>
+              <el-radio-button value="chapter">指定 Part / 章節</el-radio-button>
+              <el-radio-button value="wrong" :disabled="!hasWrongWords">
+                僅錯字本 (目前共 {{ wrongWordsCount }} 字)
+              </el-radio-button>
+            </el-radio-group>
+          </el-form-item>
 
-        <!-- 2. Show Range selectors if Chapter range is selected -->
-        <el-form-item v-if="rangeType === 'chapter'" label="請選擇章節">
-          <div class="quiz-range-selects">
-            <el-select
-              v-model="selectedPartId"
-              placeholder="請選擇 Part"
-              style="flex: 1;"
-              @change="handlePartSelectChange"
+          <!-- 2. Show Range selectors if Chapter range is selected -->
+          <el-form-item v-if="rangeType === 'chapter'" label="請選擇章節">
+            <div class="quiz-range-selects">
+              <el-select
+                v-model="selectedPartId"
+                placeholder="請選擇 Part"
+                style="flex: 1;"
+                @change="handlePartSelectChange"
+              >
+                <el-option
+                  v-for="p in vocabularyData"
+                  :key="p.part_id"
+                  :value="p.part_id"
+                  :label="p.part_name"
+                />
+              </el-select>
+
+              <el-select
+                v-model="selectedChapterName"
+                :disabled="!selectedPartId"
+                placeholder="請選擇章節"
+                style="flex: 1;"
+                @change="handleChapterSelectChange"
+              >
+                <el-option
+                  v-for="ch in availableChapters"
+                  :key="ch"
+                  :value="ch"
+                  :label="ch"
+                />
+              </el-select>
+            </div>
+          </el-form-item>
+
+          <!-- 3. Question Count -->
+          <el-form-item label="2. 選擇測驗題數">
+            <el-input-number
+              v-model="questionCount"
+              :min="availableWordsList.length > 0 ? 1 : 0"
+              :max="maxAvailableQuestions"
+              :disabled="availableWordsList.length === 0"
+              :step="availableWordsList.length >= 5 ? 5 : 1"
+              controls-position="right"
+              style="width: 150px;"
+            />
+            <span class="max-hint text-muted">
+              (此範圍最多可測驗 {{ maxAvailableQuestions }} 題)
+            </span>
+          </el-form-item>
+
+          <!-- 4. Start Button -->
+          <el-form-item style="margin-top: 32px;">
+            <el-button
+              class="btn-primary-neon"
+              size="large"
+              style="width: 100%; font-size: 18px; height: 50px;"
+              :disabled="!isSetupValid"
+              @click="startQuiz"
             >
-              <el-option
-                v-for="p in vocabularyData"
-                :key="p.part_id"
-                :value="p.part_id"
-                :label="p.part_name"
-              />
-            </el-select>
-
-            <el-select
-              v-model="selectedChapterName"
-              :disabled="!selectedPartId"
-              placeholder="請選擇章節"
-              style="flex: 1;"
-              @change="handleChapterSelectChange"
-            >
-              <el-option
-                v-for="ch in availableChapters"
-                :key="ch"
-                :value="ch"
-                :label="ch"
-              />
-            </el-select>
-          </div>
-        </el-form-item>
-
-        <!-- 3. Question Count -->
-        <el-form-item label="2. 選擇測驗題數">
-          <el-input-number
-            v-model="questionCount"
-            :min="availableWordsList.length > 0 ? 1 : 0"
-            :max="maxAvailableQuestions"
-            :disabled="availableWordsList.length === 0"
-            :step="availableWordsList.length >= 5 ? 5 : 1"
-            controls-position="right"
-            style="width: 150px;"
-          />
-          <span class="max-hint text-muted">
-            (此範圍最多可測驗 {{ maxAvailableQuestions }} 題)
-          </span>
-        </el-form-item>
-
-        <!-- 4. Start Button -->
-        <el-form-item style="margin-top: 32px;">
-          <el-button
-            class="btn-primary-neon"
-            size="large"
-            style="width: 100%; font-size: 18px; height: 50px;"
-            :disabled="!isSetupValid"
-            @click="startQuiz"
-          >
-            開始測驗
-          </el-button>
-        </el-form-item>
-      </el-form>
+              開始測驗
+            </el-button>
+          </el-form-item>
+        </el-form>
+      </div>
     </div>
 
     <!-- Active Quiz Page -->
@@ -111,7 +114,7 @@
             size="small"
             :icon="Headset"
             style="margin-left: 8px;"
-            @click.stop="speakWord(currentQuestion.word)"
+            @click.stop="speakText(currentQuestion.word)"
           />
         </div>
       </div>
@@ -164,7 +167,7 @@
         <el-table :data="wrongAnswers" class="desktop-only" style="width: 100%; border-radius: 8px;">
           <el-table-column prop="word" label="單字" width="150">
             <template #default="scope">
-              <span class="wrong-word-link" @click="speakWord(scope.row.word)">
+              <span class="wrong-word-link" @click="speakText(scope.row.word)">
                 {{ scope.row.word }} <el-icon><Headset /></el-icon>
               </span>
             </template>
@@ -186,7 +189,7 @@
             style="padding: 16px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.25); background: rgba(239, 68, 68, 0.04); display: flex; flex-direction: column; gap: 8px; text-align: left;"
           >
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span class="wrong-word-link" style="font-size: 16px; font-weight: 700; color: var(--text-primary);" @click="speakWord(w.word)">
+              <span class="wrong-word-link" style="font-size: 16px; font-weight: 700; color: var(--text-primary);" @click="speakText(w.word)">
                 {{ w.word }} <el-icon style="font-size: 14px; margin-left: 4px;"><Headset /></el-icon>
               </span>
               <el-tag type="danger" size="small" effect="dark" style="border-radius: 6px;">答錯</el-tag>
@@ -220,9 +223,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Postcard, Headset, ArrowRight, Trophy } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { useTTS } from '../composables/useTTS.js'
 
 const props = defineProps({
   vocabularyData: {
@@ -366,19 +370,7 @@ const currentQuestion = computed(() => {
   return questions.value[currentQuestionIdx.value]
 })
 
-// Generate options for cascade selection
-const cascaderOptions = computed(() => {
-  return props.vocabularyData.map(part => {
-    return {
-      value: part.part_id,
-      label: part.part_name,
-      children: part.chapters.map(ch => ({
-        value: ch.chapter_name,
-        label: ch.chapter_name
-      }))
-    }
-  })
-})
+
 
 // Shuffle helper (Fisher-Yates)
 const shuffle = (array) => {
@@ -528,39 +520,8 @@ const restartSetup = () => {
   quizState.value = 'setup'
 }
 
-const speakWord = (word) => {
-  if (!word) return
-  const cleanWord = word.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim()
-  const audioUrl = `https://dict.youdao.com/dictvoice?type=2&audio=${encodeURIComponent(cleanWord)}`
-  const audio = new Audio(audioUrl)
-  
-  let fallbackExecuted = false
-  const runFallback = () => {
-    if (fallbackExecuted) return
-    fallbackExecuted = true
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel()
-      const utterance = new SpeechSynthesisUtterance(cleanWord)
-      utterance.lang = 'en-US'
-      utterance.rate = 0.95
-      window.speechSynthesis.speak(utterance)
-    } else {
-      ElMessage.warning('您的裝置不支援語音發音。')
-    }
-  }
-
-  audio.play().catch(err => {
-    console.warn('Youdao TTS failed, fallback to native TTS', err)
-    runFallback()
-  })
-
-  setTimeout(() => {
-    if (audio.paused && !fallbackExecuted) {
-      console.warn('Youdao TTS timeout, fallback to native TTS')
-      runFallback()
-    }
-  }, 800)
-}
+// 使用共用 TTS composable
+const { speakText } = useTTS()
 
 const loadWrongWordsLocal = () => {
   const saved = localStorage.getItem('vocabulary_wrong_words')
@@ -579,8 +540,26 @@ const customColors = [
   { color: '#10b981', percentage: 100 }
 ]
 
+// 答題後按 Enter 或空白鍵可快鍵前進下一題
+const handleKeyDown = (e) => {
+  if (quizState.value === 'active' && hasAnswered.value) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      nextQuestion()
+    }
+  }
+}
+
 onMounted(() => {
   loadWrongWordsLocal()
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.getVoices()
+  }
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
 })
 </script>
 
@@ -591,22 +570,29 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-/* 設定面板：用 exam.jpg 作為裝飾背景的 glass 卡片 */
+/* 設定面板：左側表單 + 右側背景圖呼吸空間 */
 .setup-panel {
   position: relative;
   overflow: hidden;
-  padding: 32px;
+  min-height: 360px;
+  padding: 0;
+  /* 左深右透漸層，讓右半邊的 exam.jpg 清晰露出 */
   background:
-    linear-gradient(rgba(22, 28, 45, 0.55), rgba(22, 28, 45, 0.55)),
-    url('/exam.jpg') center 100% / 60% 90% no-repeat fixed;
-  backdrop-filter: blur(12px) saturate(180%);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
+    linear-gradient(
+      to right,
+      rgba(11, 15, 25, 0.92) 0%,
+      rgba(11, 15, 25, 0.85) 10%,
+      rgba(11, 15, 25, 0.45) 20%,
+      rgba(11, 15, 25, 0.05) 100%
+    ),
+    url('/exam.jpg') center top / cover no-repeat;
   border: 1px solid var(--border-color);
   border-radius: 20px;
   box-shadow: var(--shadow-main), 0 0 25px rgba(99, 102, 241, 0.1);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* 頂部霓虹線條裝飾 */
 .setup-panel::before,
 .result-page::before {
   content: '';
@@ -619,6 +605,22 @@ onMounted(() => {
 .setup-panel:hover {
   border-color: var(--border-hover);
   box-shadow: var(--shadow-main), var(--shadow-glow);
+}
+
+/* 表單內容限制在左側約 45% 寬 */
+.setup-inner {
+  padding: 32px;
+  max-width: 460px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 767px) {
+  .setup-inner {
+    max-width: 100%;
+    padding: 20px 16px;
+  }
 }
 
 /* 進行中測驗：各子區塊獨立，不再用大面板包覆 */
@@ -642,8 +644,49 @@ onMounted(() => {
 
 .quiz-radio-group {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
+  width: fit-content;
+  min-width: 280px;
+}
+
+/* 讓 El Plus radio button 在垂直排列時撐滿群組寬度 */
+.quiz-radio-group :deep(.el-radio-button) {
+  width: 100%;
+}
+
+/* 暗色玻璃風格（與手機版一致） */
+.quiz-radio-group :deep(.el-radio-button__inner) {
+  width: 100%;
+  display: block;
+  border-radius: 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: var(--text-muted) !important;
+  padding: 12px 16px !important;
+  text-align: center;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.quiz-radio-group :deep(.el-radio-button__inner:hover) {
+  background: rgba(99, 102, 241, 0.1) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 選中狀態 */
+.quiz-radio-group :deep(.el-radio-button.is-active .el-radio-button__inner) {
+  background: rgba(99, 102, 241, 0.15) !important;
+  border-color: var(--primary-color) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.3) !important;
+}
+
+/* disabled 狀態 */
+.quiz-radio-group :deep(.el-radio-button.is-disabled .el-radio-button__inner) {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
 }
 
 .max-hint {
