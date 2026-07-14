@@ -7,23 +7,17 @@
           <el-icon><Notebook /></el-icon>
           <span>學習範圍：</span>
         </div>
-        <!-- 電腦版：使用階層選擇器 -->
-        <el-cascader
-          v-model="selectedRange"
-          :options="cascaderOptions"
-          :props="{ expandTrigger: 'hover' }"
-          placeholder="請選擇 Part / 章節"
-          style="width: 280px;"
-          class="desktop-only"
-          @change="handleRangeChange"
-        />
-        <!-- 手機版：使用雙下拉選單，極好點選 -->
-        <div class="mobile-range-selects mobile-only">
+        <!-- 學習範圍選擇：雙下拉選單（電腦版並排、手機版自動換行/垂直堆疊） -->
+        <div class="study-range-selects">
           <el-select
             v-model="selectedPartId"
             placeholder="選擇 Part"
+            style="width: 320px;"
             @change="handlePartSelectChange"
           >
+            <template #prefix>
+              <el-icon><Compass /></el-icon>
+            </template>
             <el-option
               v-for="p in props.vocabularyData"
               :key="p.part_id"
@@ -35,8 +29,12 @@
             v-model="selectedChapterName"
             placeholder="選擇章節"
             :disabled="!selectedPartId"
+            style="width: 380px;"
             @change="handleChapterSelectChange"
           >
+            <template #prefix>
+              <el-icon><Collection /></el-icon>
+            </template>
             <el-option
               v-for="ch in availableChapters"
               :key="ch"
@@ -73,117 +71,159 @@
 
     <!-- Study Cards Interface -->
     <div v-else class="cards-layout">
-      <!-- Word Card (Unified, no flip) -->
-      <div 
-        class="word-info-card glow-card swipe-transition"
-        @touchstart="handleTouchStart"
-        @touchend="handleTouchEnd"
-      >
-        <!-- Header row (Word, Phonetic, Structure) -->
-        <div class="card-header-row">
-          <div class="card-word-title">{{ currentWord.word }}</div>
-          <div class="card-word-phonetic">{{ currentWord.phonetic }}</div>
-          <div v-if="currentWord.structure" class="card-word-structure">
-            {{ currentWord.structure }}
-          </div>
-        </div>
-
-        <div class="card-body-section">
-          <!-- Main definition -->
-          <div class="definition-block">
-            <span class="section-label">中文釋義</span>
-            <div class="definition-text">{{ currentWord.definition }}</div>
-          </div>
-
-          <!-- Literal meaning / Root Analysis -->
-          <div v-if="currentWord.literal_meaning" class="literal-block">
-            <span class="section-label">字源分析</span>
-            <div class="literal-text">{{ currentWord.literal_meaning }}</div>
-          </div>
-        </div>
-
-        <!-- Synonyms & Derivatives Row -->
-        <div 
-          v-if="(currentWord.derivatives && currentWord.derivatives.length) || (currentWord.synonyms && currentWord.synonyms.length)" 
-          class="card-footer-section"
-        >
-          <!-- Derivatives -->
-          <div v-if="currentWord.derivatives && currentWord.derivatives.length" class="derivatives-col">
-            <span class="section-label">衍生詞</span>
-            <div class="deriv-tags-row">
-              <el-tag
-                v-for="d in currentWord.derivatives"
-                :key="d.word"
-                type="info"
-                effect="dark"
-                class="custom-deriv-tag"
-              >
-                <strong>{{ d.word }}</strong> ({{ d.meaning }})
-              </el-tag>
+      <!-- Wrap the main card content and examples panel in transition -->
+      <transition name="fade-slide" mode="out-in">
+        <!-- 1. Skeleton Screen when loading -->
+        <div v-if="isLoading" class="skeleton-layout" style="width: 100%; display: flex; flex-direction: column; gap: 20px;">
+          <!-- Skeleton Card -->
+          <div class="word-info-card glow-card" style="padding: 32px; min-height: 320px; display: flex; flex-direction: column; gap: 24px;">
+            <div class="card-header-row" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px;">
+              <div class="skeleton-pulse skeleton-title" style="margin-bottom: 0; height: 32px; width: 140px;"></div>
+              <div class="skeleton-pulse skeleton-phonetic" style="margin-bottom: 0; width: 100px; height: 24px;"></div>
+            </div>
+            <div class="card-body-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+              <div>
+                <div class="skeleton-pulse" style="width: 60px; height: 12px; margin-bottom: 12px;"></div>
+                <div class="skeleton-pulse" style="height: 60px; width: 100%;"></div>
+              </div>
+              <div>
+                <div class="skeleton-pulse" style="width: 60px; height: 12px; margin-bottom: 12px;"></div>
+                <div class="skeleton-pulse" style="height: 60px; width: 100%;"></div>
+              </div>
             </div>
           </div>
 
-          <!-- Synonyms -->
-          <div v-if="currentWord.synonyms && currentWord.synonyms.length" class="synonyms-col">
-            <span class="section-label">同義詞</span>
-            <div class="syn-tags-row">
-              <el-tag 
-                v-for="s in currentWord.synonyms" 
-                :key="s" 
-                type="success" 
-                effect="plain"
-                class="custom-syn-tag"
-              >
-                {{ s }}
-              </el-tag>
+          <!-- Skeleton Examples Panel -->
+          <div class="examples-panel glass-container" style="padding: 24px; min-height: 180px; display: flex; flex-direction: column; gap: 16px;">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px;">
+              <div class="skeleton-pulse" style="width: 120px; height: 24px; margin: 0;"></div>
+              <div style="display: flex; gap: 8px;">
+                <div class="skeleton-pulse" style="width: 90px; height: 32px; border-radius: 8px;"></div>
+                <div class="skeleton-pulse" style="width: 90px; height: 32px; border-radius: 8px;"></div>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+              <div class="skeleton-pulse" style="height: 20px; width: 90%;"></div>
+              <div class="skeleton-pulse" style="height: 16px; width: 60%;"></div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- TTS Speak and Example Area -->
-      <div class="examples-panel glass-container">
-        <div class="panel-header">
-          <div class="word-header-info">
-            <span class="word-name">{{ currentWord.word }}</span>
-            <span class="word-index-tag">進度: {{ currentWordIndex + 1 }} / {{ currentWords.length }}</span>
-          </div>
-          <!-- Audio TTS Button -->
-          <div class="audio-buttons-row">
-            <el-button
-              class="btn-accent-glass"
-              :icon="Headset"
-              @click.stop="speakText(currentWord.word)"
+        <!-- 2. Actual Content when loaded -->
+        <div v-else class="content-wrapper-layout" style="width: 100%; display: flex; flex-direction: column; gap: 20px;">
+          <!-- Word Card (Unified, no flip) -->
+          <div 
+            class="word-info-card glow-card swipe-transition"
+            @touchstart="handleTouchStart"
+            @touchend="handleTouchEnd"
+          >
+            <!-- Header row (Word, Phonetic, Structure) -->
+            <div class="card-header-row">
+              <div class="card-word-title">{{ currentWord.word }}</div>
+              <div class="card-word-phonetic">{{ currentWord.phonetic }}</div>
+              <div v-if="currentWord.structure" class="card-word-structure">
+                {{ currentWord.structure }}
+              </div>
+            </div>
+
+            <div class="card-body-section">
+              <!-- Main definition -->
+              <div class="definition-block">
+                <span class="section-label">中文釋義</span>
+                <div class="definition-text">{{ currentWord.definition }}</div>
+              </div>
+
+              <!-- Literal meaning / Root Analysis -->
+              <div v-if="currentWord.literal_meaning" class="literal-block">
+                <span class="section-label">字源分析</span>
+                <div class="literal-text">{{ currentWord.literal_meaning }}</div>
+              </div>
+            </div>
+
+            <!-- Synonyms & Derivatives Row -->
+            <div 
+              v-if="(currentWord.derivatives && currentWord.derivatives.length) || (currentWord.synonyms && currentWord.synonyms.length)" 
+              class="card-footer-section"
             >
-              單字發音
-            </el-button>
-            <el-button
-              v-if="currentWord.examples && currentWord.examples.length"
-              class="btn-secondary-glass"
-              :icon="VideoPlay"
-              @click.stop="speakText(currentWord.examples.map(ex => ex.en).join(' '))"
-            >
-              例句發音
-            </el-button>
-          </div>
-        </div>
+              <!-- Derivatives -->
+              <div v-if="currentWord.derivatives && currentWord.derivatives.length" class="derivatives-col">
+                <span class="section-label">衍生詞</span>
+                <div class="deriv-tags-row">
+                  <el-tag
+                    v-for="d in currentWord.derivatives"
+                    :key="d.word"
+                    type="info"
+                    effect="dark"
+                    class="custom-deriv-tag"
+                  >
+                    <strong>{{ d.word }}</strong> ({{ d.meaning }})
+                  </el-tag>
+                </div>
+              </div>
 
-        <!-- Examples List -->
-        <div v-if="currentWord.examples && currentWord.examples.length" class="examples-list">
-          <div v-for="(ex, idx) in currentWord.examples" :key="idx" class="example-item">
-            <div class="ex-en" style="display: flex; align-items: flex-start;">
-              <span class="ex-bullet-audio" @click.stop="speakText(ex.en)" title="播放此例句">
-                <el-icon><VideoPlay /></el-icon>
-              </span>
-              <span class="ex-text" @click.stop="speakText(ex.en)" title="播放此例句" style="cursor: pointer; flex: 1;">{{ ex.en }}</span>
+              <!-- Synonyms -->
+              <div v-if="currentWord.synonyms && currentWord.synonyms.length" class="synonyms-col">
+                <span class="section-label">同義詞</span>
+                <div class="syn-tags-row">
+                  <el-tag 
+                    v-for="s in currentWord.synonyms" 
+                    :key="s" 
+                    type="success" 
+                    effect="plain"
+                    class="custom-syn-tag"
+                  >
+                    {{ s }}
+                  </el-tag>
+                </div>
+              </div>
             </div>
-            <div class="ex-zh">{{ ex.zh }}</div>
+          </div>
+
+          <!-- TTS Speak and Example Area -->
+          <div class="examples-panel glass-container">
+            <div class="panel-header">
+              <div class="word-header-info">
+                <span class="word-name">{{ currentWord.word }}</span>
+                <span class="word-index-tag">進度: {{ currentWordIndex + 1 }} / {{ currentWords.length }}</span>
+              </div>
+              <!-- Audio TTS Button -->
+              <div class="audio-buttons-row">
+                <el-button
+                  class="btn-accent-glass"
+                  :icon="Headset"
+                  @click.stop="speakText(currentWord.word)"
+                >
+                  單字發音
+                </el-button>
+                <el-button
+                  v-if="currentWord.examples && currentWord.examples.length"
+                  class="btn-secondary-glass"
+                  :icon="VideoPlay"
+                  @click.stop="speakText(currentWord.examples.map(ex => ex.en).join(' '))"
+                >
+                  例句發音
+                </el-button>
+              </div>
+            </div>
+
+            <!-- Examples List -->
+            <div v-if="currentWord.examples && currentWord.examples.length" class="examples-list">
+              <div v-for="(ex, idx) in currentWord.examples" :key="idx" class="example-item">
+                <div class="ex-en" style="display: flex; align-items: flex-start;">
+                  <span class="ex-bullet-audio" @click.stop="speakText(ex.en)" title="播放此例句">
+                    <el-icon><VideoPlay /></el-icon>
+                  </span>
+                  <span class="ex-text" @click.stop="speakText(ex.en)" title="播放此例句" style="cursor: pointer; flex: 1;">{{ ex.en }}</span>
+                </div>
+                <div class="ex-zh">{{ ex.zh }}</div>
+              </div>
+            </div>
+            <div v-else class="no-examples text-muted">
+              無提供此單字之課本例句
+            </div>
           </div>
         </div>
-        <div v-else class="no-examples text-muted">
-          無提供此單字之課本例句
-        </div>
-      </div>
+      </transition>
 
       <!-- Navigation Bar -->
       <div class="navigation-bar">
@@ -209,7 +249,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { Headset, VideoPlay, Notebook, ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import { Headset, VideoPlay, Notebook, ArrowLeft, ArrowRight, Compass, Collection } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const props = defineProps({
@@ -227,6 +267,7 @@ const selectedSearchWord = ref(null)
 // Two separate selects helper for mobile
 const selectedPartId = ref('')
 const selectedChapterName = ref('')
+const isLoading = ref(false)
 
 // Initialize and watch selectedRange to sync with selectedPartId and selectedChapterName
 watch(selectedRange, (newRange) => {
@@ -343,6 +384,16 @@ const currentWords = computed(() => {
 const currentWord = computed(() => {
   if (currentWordIndex.value >= currentWords.value.length) return {}
   return currentWords.value[currentWordIndex.value]
+})
+
+// Watch currentWord changes to trigger automatic loading animation
+watch(() => currentWord.value, (newWord) => {
+  if (newWord && newWord.word) {
+    isLoading.value = true
+    setTimeout(() => {
+      isLoading.value = false
+    }, 200)
+  }
 })
 
 // Reset word index
@@ -767,6 +818,20 @@ watch(() => currentWordIndex.value, () => {
     gap: 12px;
     align-items: flex-start;
   }
+  .study-range-selects {
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .study-range-selects .el-select {
+    width: 100% !important;
+  }
+}
+
+.study-range-selects {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 .selector-group {

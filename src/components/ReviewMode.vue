@@ -40,19 +40,31 @@
           </el-table-column>
           <el-table-column prop="phonetic" label="音標" width="160" />
           <el-table-column prop="definition" label="中文解釋" />
-          <el-table-column prop="box" label="學習掌握度" width="160" align="center">
+          <el-table-column prop="box" label="學習掌握度" width="180" align="center">
             <template #default="scope">
-              <el-progress 
-                :percentage="scope.row.box === 2 ? 66 : (scope.row.box >= 3 ? 100 : 33)"
-                :status="scope.row.box === 2 ? 'warning' : (scope.row.box >= 3 ? 'success' : 'exception')"
-                :stroke-width="12"
-                text-inside
-              />
+              <div class="mastery-progress-wrapper">
+                <div class="progress-track">
+                  <div 
+                    class="progress-bar-fill" 
+                    :class="scope.row.box === 2 ? 'warning' : (scope.row.box >= 3 ? 'success' : 'danger')" 
+                    :style="{ width: scope.row.box === 2 ? '66%' : (scope.row.box >= 3 ? '100%' : '33%') }"
+                  ></div>
+                </div>
+                <span 
+                  class="progress-text-label" 
+                  :class="scope.row.box === 2 ? 'text-warning' : (scope.row.box >= 3 ? 'text-success' : 'text-danger')"
+                >
+                  {{ scope.row.box === 2 ? '已熟練 (Box 2)' : (scope.row.box >= 3 ? '已精通 (Box 3)' : '初學 (Box 1)') }}
+                </span>
+              </div>
             </template>
           </el-table-column>
-          <el-table-column prop="count" label="錯誤次數" width="100" align="center">
+          <el-table-column prop="count" label="錯誤次數" width="120" align="center">
             <template #default="scope">
-              <el-badge :value="scope.row.count" :type="scope.row.count >= 3 ? 'danger' : 'warning'" />
+              <span class="error-badge-pill" :class="{ 'high-error': scope.row.count >= 3 }">
+                <el-icon style="margin-right: 4px; vertical-align: middle;"><Warning /></el-icon>
+                {{ scope.row.count }} 次
+              </span>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="140" align="center">
@@ -94,18 +106,30 @@
           <div class="mobile-word-def">{{ item.definition }}</div>
           
           <div class="mobile-word-meta">
-            <div class="mastery-indicator">
+            <div class="mastery-indicator-new">
               <span class="meta-label">掌握度</span>
-              <div class="pill-group">
-                <span class="indicator-pill active" :class="{ danger: item.box === 1, warning: item.box === 2, success: item.box >= 3 }"></span>
-                <span class="indicator-pill" :class="{ active: item.box >= 2, warning: item.box === 2, success: item.box >= 3 }"></span>
-                <span class="indicator-pill" :class="{ active: item.box >= 3, success: item.box >= 3 }"></span>
+              <div class="mastery-progress-wrapper" style="width: 110px;">
+                <div class="progress-track" style="height: 6px;">
+                  <div 
+                    class="progress-bar-fill" 
+                    :class="item.box === 2 ? 'warning' : (item.box >= 3 ? 'success' : 'danger')" 
+                    :style="{ width: item.box === 2 ? '66%' : (item.box >= 3 ? '100%' : '33%') }"
+                  ></div>
+                </div>
+                <span 
+                  class="progress-text-label" 
+                  :class="item.box === 2 ? 'text-warning' : (item.box >= 3 ? 'text-success' : 'text-danger')"
+                  style="font-size: 11px; margin-top: 2px;"
+                >
+                  {{ item.box === 2 ? '已熟練 (Box 2)' : (item.box >= 3 ? '已精通 (Box 3)' : '初學 (Box 1)') }}
+                </span>
               </div>
             </div>
             
-            <div class="error-indicator">
+            <div class="error-indicator-new">
               <span class="meta-label">錯誤次數</span>
-              <span class="error-count-tag" :class="{ high: item.count >= 3 }">
+              <span class="error-badge-pill" :class="{ 'high-error': item.count >= 3 }" style="font-size: 11px; padding: 4px 8px;">
+                <el-icon style="margin-right: 3px; vertical-align: middle;"><Warning /></el-icon>
                 {{ item.count }} 次
               </span>
             </div>
@@ -115,99 +139,130 @@
 
       <!-- 2. Flashcard View Mode -->
       <div v-else-if="viewMode === 'cards'" class="cards-view">
-        <!-- Word Card (Unified, no flip) -->
-        <div 
-          class="word-info-card glow-card"
-          @touchstart="handleTouchStart"
-          @touchend="handleTouchEnd"
-        >
-          <!-- Header row (Unified style with StudyMode) -->
-          <div class="card-header-row">
-            <div class="card-word-title">
-              {{ currentWord.word }}
-              <el-button
-                circle
-                class="btn-accent-glass speak-inline-btn"
-                size="small"
-                :icon="Headset"
-                @click.stop="speakWord(currentWord.word)"
-              />
-            </div>
-            <div class="card-word-phonetic">{{ currentWord.phonetic }}</div>
-            <div v-if="currentWord.structure" class="card-word-structure">
-              {{ currentWord.structure }}
-            </div>
-            <div class="card-meta-tags" style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
-              <el-tag
-                :type="currentWord.box === 2 ? 'warning' : (currentWord.box >= 3 ? 'success' : 'danger')"
-                effect="dark"
-                class="box-tag"
-                style="border-radius: 12px; padding: 4px 10px; height: auto;"
-              >
-                掌握度: {{ currentWord.box === 2 ? '66%' : (currentWord.box >= 3 ? '100%' : '33%') }} (Box {{ currentWord.box || 1 }})
-              </el-tag>
-              <span class="card-badge" style="position: static; font-size: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); padding: 4px 10px; border-radius: 12px; color: var(--text-muted);">
-                {{ currentWordIndex + 1 }} / {{ wrongWordsDetails.length }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Body -->
-          <div class="card-body-section">
-            <div class="definition-block">
-              <span class="section-label">中文釋義</span>
-              <div class="definition-text">{{ currentWord.definition }}</div>
-            </div>
-
-            <div v-if="currentWord.literal_meaning" class="literal-block">
-              <span class="section-label">字源分析</span>
-              <div class="literal-text">{{ currentWord.literal_meaning }}</div>
-            </div>
-
-            <div v-if="currentWord.examples && currentWord.examples.length" class="example-block" style="grid-column: span 2; border-top: 1px dashed rgba(255, 255, 255, 0.08); padding-top: 16px; margin-top: 4px;">
-              <span class="section-label">參考例句</span>
-              <div v-for="(ex, index) in currentWord.examples" :key="index" class="example-item" style="margin-bottom: 12px; border-left: 3px solid var(--accent-color); padding-left: 12px;">
-                <div class="example-en" style="font-size: 15px; color: var(--text-primary); line-height: 1.5; font-family: 'Outfit', sans-serif; font-weight: 500;">{{ ex.en }}</div>
-                <div class="example-zh" style="font-size: 14px; color: var(--text-muted); margin-top: 4px;">{{ ex.zh }}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Footer (Synonyms / Derivatives) -->
+        <div class="content-wrapper-layout" style="width: 100%; display: flex; flex-direction: column; gap: 20px;">
+          <!-- Word Card (Unified, no flip) -->
           <div 
-            v-if="(currentWord.derivatives && currentWord.derivatives.length) || (currentWord.synonyms && currentWord.synonyms.length)" 
-            class="card-footer-section"
+            class="word-info-card glow-card"
+            @touchstart="handleTouchStart"
+            @touchend="handleTouchEnd"
           >
-            <!-- Derivatives -->
-            <div v-if="currentWord.derivatives && currentWord.derivatives.length" class="derivatives-col">
-              <span class="section-label">衍生詞</span>
-              <div class="deriv-tags-row">
+            <!-- Header row (Unified style with StudyMode) -->
+            <div class="card-header-row">
+              <div class="card-word-title">
+                {{ currentWord.word }}
+              </div>
+              <div class="card-word-phonetic">{{ currentWord.phonetic }}</div>
+              <div v-if="currentWord.structure" class="card-word-structure">
+                {{ currentWord.structure }}
+              </div>
+              <div class="card-meta-tags" style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
                 <el-tag
-                  v-for="d in currentWord.derivatives"
-                  :key="d.word"
-                  type="info"
+                  :type="currentWord.box === 2 ? 'warning' : (currentWord.box >= 3 ? 'success' : 'danger')"
                   effect="dark"
-                  class="custom-deriv-tag"
+                  class="box-tag"
+                  style="border-radius: 12px; padding: 4px 10px; height: auto;"
                 >
-                  <strong>{{ d.word }}</strong> ({{ d.meaning }})
+                  掌握度: {{ currentWord.box === 2 ? '66%' : (currentWord.box >= 3 ? '100%' : '33%') }} (Box {{ currentWord.box || 1 }})
                 </el-tag>
+                <span class="card-badge" style="position: static; font-size: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); padding: 4px 10px; border-radius: 12px; color: var(--text-muted);">
+                  {{ currentWordIndex + 1 }} / {{ wrongWordsDetails.length }}
+                </span>
               </div>
             </div>
 
-            <!-- Synonyms -->
-            <div v-if="currentWord.synonyms && currentWord.synonyms.length" class="synonyms-col">
-              <span class="section-label">同義詞</span>
-              <div class="syn-tags-row">
-                <el-tag 
-                  v-for="s in currentWord.synonyms" 
-                  :key="s" 
-                  type="success" 
-                  effect="plain"
-                  class="custom-syn-tag"
-                >
-                  {{ s }}
-                </el-tag>
+            <!-- Body -->
+            <div class="card-body-section">
+              <div class="definition-block">
+                <span class="section-label">中文釋義</span>
+                <div class="definition-text">{{ currentWord.definition }}</div>
               </div>
+
+              <div v-if="currentWord.literal_meaning" class="literal-block">
+                <span class="section-label">字源分析</span>
+                <div class="literal-text">{{ currentWord.literal_meaning }}</div>
+              </div>
+            </div>
+
+            <!-- Footer (Synonyms / Derivatives) -->
+            <div 
+              v-if="(currentWord.derivatives && currentWord.derivatives.length) || (currentWord.synonyms && currentWord.synonyms.length)" 
+              class="card-footer-section"
+            >
+              <!-- Derivatives -->
+              <div v-if="currentWord.derivatives && currentWord.derivatives.length" class="derivatives-col">
+                <span class="section-label">衍生詞</span>
+                <div class="deriv-tags-row">
+                  <el-tag
+                    v-for="d in currentWord.derivatives"
+                    :key="d.word"
+                    type="info"
+                    effect="dark"
+                    class="custom-deriv-tag"
+                  >
+                    <strong>{{ d.word }}</strong> ({{ d.meaning }})
+                  </el-tag>
+                </div>
+              </div>
+
+              <!-- Synonyms -->
+              <div v-if="currentWord.synonyms && currentWord.synonyms.length" class="synonyms-col">
+                <span class="section-label">同義詞</span>
+                <div class="syn-tags-row">
+                  <el-tag 
+                    v-for="s in currentWord.synonyms" 
+                    :key="s" 
+                    type="success" 
+                    effect="plain"
+                    class="custom-syn-tag"
+                  >
+                    {{ s }}
+                  </el-tag>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Examples & Audio Pronunciation Panel (Unified style with StudyMode) -->
+          <div class="examples-panel glass-container">
+            <div class="panel-header">
+              <div class="word-header-info">
+                <span class="word-name">{{ currentWord.word }}</span>
+                <span class="word-index-tag">進度: {{ currentWordIndex + 1 }} / {{ wrongWordsDetails.length }}</span>
+              </div>
+              <!-- Audio TTS Buttons -->
+              <div class="audio-buttons-row">
+                <el-button
+                  class="btn-accent-glass"
+                  :icon="Headset"
+                  @click.stop="speakText(currentWord.word)"
+                >
+                  單字發音
+                </el-button>
+                <el-button
+                  v-if="currentWord.examples && currentWord.examples.length"
+                  class="btn-secondary-glass"
+                  :icon="VideoPlay"
+                  @click.stop="speakText(currentWord.examples.map(ex => ex.en).join(' '))"
+                >
+                  例句發音
+                </el-button>
+              </div>
+            </div>
+
+            <!-- Examples List -->
+            <div v-if="currentWord.examples && currentWord.examples.length" class="examples-list">
+              <div v-for="(ex, idx) in currentWord.examples" :key="idx" class="example-item">
+                <div class="ex-en" style="display: flex; align-items: flex-start;">
+                  <span class="ex-bullet-audio" @click.stop="speakText(ex.en)" title="播放此例句">
+                    <el-icon><VideoPlay /></el-icon>
+                  </span>
+                  <span class="ex-text" @click.stop="speakText(ex.en)" title="播放此例句" style="cursor: pointer; flex: 1;">{{ ex.en }}</span>
+                </div>
+                <div class="ex-zh">{{ ex.zh }}</div>
+              </div>
+            </div>
+            <div v-else class="no-examples text-muted">
+              無提供此單字之課本例句
             </div>
           </div>
         </div>
@@ -230,6 +285,25 @@
             @click="rateWord(currentWord.id, true)"
           >
             記住了 (+1 箱)
+          </el-button>
+        </div>
+
+        <!-- Navigation Bar (電腦版 - 與背單字一致) -->
+        <div class="navigation-bar desktop-only" style="margin-top: 16px;">
+          <el-button
+            :disabled="currentWordIndex === 0"
+            class="btn-secondary-glass nav-btn-prev"
+            @click="prevCard"
+          >
+            <el-icon><ArrowLeft /></el-icon> 上一個單字
+          </el-button>
+          
+          <el-button
+            :disabled="currentWordIndex === wrongWordsDetails.length - 1"
+            class="btn-primary-neon nav-btn-next"
+            @click="nextCard"
+          >
+            下一個單字 <el-icon><ArrowRight /></el-icon>
           </el-button>
         </div>
 
@@ -259,7 +333,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Warning, Headset, ArrowLeft, ArrowRight, Check, Close } from '@element-plus/icons-vue'
+import { Warning, Headset, ArrowLeft, ArrowRight, Check, Close, VideoPlay } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 
 const props = defineProps({
@@ -271,16 +345,16 @@ const props = defineProps({
 
 const emit = defineEmits(['switch-tab', 'update-wrong-count'])
 
-// View Mode: 'list' or 'cards'
+// 檢視模式：'list'（列表）或 'cards'（卡片）
 const viewMode = ref('list')
 
-// Cards view states
+// 卡片檢視狀態
 const currentWordIndex = ref(0)
 
-// Local copy of wrong words loaded from localStorage
+// 從 localStorage 載入的錯字本本地複本
 const wrongWordsList = ref([])
 
-// Load wrong word details by matching wrongIds with props.vocabularyData
+// 透過比對錯字 ID 與 vocabularyData 載入詳細錯字內容
 const wrongWordsDetails = computed(() => {
   const list = []
   const wrongMap = new Map()
@@ -305,7 +379,7 @@ const wrongWordsDetails = computed(() => {
   })
   
   return list.sort((a, b) => {
-    if (a.box !== b.box) return a.box - b.box // Box 1 first, then 2, then 3
+    if (a.box !== b.box) return a.box - b.box // Box 1 優先，再來是 2，最後是 3
     if (b.count !== a.count) return b.count - a.count
     return b.timestamp - a.timestamp
   })
@@ -316,7 +390,7 @@ const currentWord = computed(() => {
   return wrongWordsDetails.value[currentWordIndex.value]
 })
 
-// Load wrong words pool from LocalStorage
+// 從 LocalStorage 載入錯字清單
 const loadWrongWords = () => {
   const saved = localStorage.getItem('vocabulary_wrong_words')
   if (saved) {
@@ -373,7 +447,7 @@ const rateWord = (wordId, isCorrect) => {
     localStorage.setItem('vocabulary_wrong_words', JSON.stringify(updated))
     emit('update-wrong-count')
     
-    // Auto advance if not last
+    // 如果不是最後一個單字則自動前進
     if (currentWordIndex.value >= updated.length && currentWordIndex.value > 0) {
       currentWordIndex.value = updated.length - 1
     }
@@ -397,11 +471,11 @@ const clearAllWrong = () => {
   }).catch(() => {})
 }
 
-// TTS 발음
-const speakWord = (word) => {
-  if (!word) return
-  const cleanWord = word.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim()
-  const audioUrl = `https://dict.youdao.com/dictvoice?type=2&audio=${encodeURIComponent(cleanWord)}`
+// 語音朗讀播放功能 (文字轉語音)
+const speakText = (text) => {
+  if (!text) return
+  let cleanText = text.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim()
+  const audioUrl = `https://dict.youdao.com/dictvoice?type=2&audio=${encodeURIComponent(cleanText)}`
   const audio = new Audio(audioUrl)
   
   let fallbackExecuted = false
@@ -410,29 +484,36 @@ const speakWord = (word) => {
     fallbackExecuted = true
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel()
-      const utterance = new SpeechSynthesisUtterance(cleanWord)
+      const utterance = new SpeechSynthesisUtterance(cleanText)
       utterance.lang = 'en-US'
-      utterance.rate = 0.95
+      utterance.rate = 0.9
+      const voices = window.speechSynthesis.getVoices()
+      const engVoice = voices.find(v => v.lang.includes('en') || v.lang.includes('EN'))
+      if (engVoice) utterance.voice = engVoice
       window.speechSynthesis.speak(utterance)
     } else {
-      ElMessage.warning('您的裝置不支援語音發音。')
+      ElMessage.warning('您的裝置不支援語音朗讀功能。')
     }
   }
 
   audio.play().catch(err => {
-    console.warn('Youdao TTS failed, fallback to native TTS', err)
+    console.warn('有道語音播放失敗，改用系統原生語音', err)
     runFallback()
   })
 
   setTimeout(() => {
     if (audio.paused && !fallbackExecuted) {
-      console.warn('Youdao TTS timeout, fallback to native TTS')
+      console.warn('有道語音超時，改用系統原生語音')
       runFallback()
     }
   }, 800)
 }
 
-// Cards navigation
+const speakWord = (word) => {
+  speakText(word)
+}
+
+// 卡片切換導覽
 const prevCard = () => {
   if (currentWordIndex.value > 0) {
     currentWordIndex.value--
@@ -554,8 +635,6 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 24px;
   width: 100%;
-  max-width: 650px;
-  margin: 0 auto;
 }
 
 /* Unified Card (matching StudyMode) */
@@ -865,4 +944,203 @@ onUnmounted(() => {
     margin-left: 0 !important;
   }
 }
+
+/* Custom Mastery Progress Bar */
+.mastery-progress-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.progress-track {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  height: 8px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-bar-fill.danger {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.45);
+}
+
+.progress-bar-fill.warning {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.45);
+}
+
+.progress-bar-fill.success {
+  background: linear-gradient(90deg, #10b981, #34d399);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.45);
+}
+
+.progress-text-label {
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 4px;
+  display: block;
+  text-align: left;
+}
+
+.progress-text-label.text-danger {
+  color: #fca5a5 !important;
+}
+
+.progress-text-label.text-warning {
+  color: #fde047 !important;
+}
+
+.progress-text-label.text-success {
+  color: #a7f3d0 !important;
+}
+
+/* Custom Error Badge Pill */
+.error-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(245, 158, 11, 0.12) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  color: #fde047 !important;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.15);
+  transition: all 0.2s ease;
+}
+
+.error-badge-pill.high-error {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  color: #fca5a5 !important;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.15);
+}
+
+.mastery-indicator-new, .error-indicator-new {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.error-indicator-new {
+  align-items: flex-end;
+}
+
+/* Navigation Bar (Desktop Card Mode) */
+.navigation-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  gap: 16px;
+  width: 100%;
+}
+
+.navigation-bar .nav-btn-prev,
+.navigation-bar .nav-btn-next {
+  flex: 1;
+  height: 48px;
+  font-weight: 600;
+}
+/* Examples Panel styling (Unified with StudyMode) */
+.examples-panel {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 16px;
+}
+
+.word-header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.word-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.word-index-tag {
+  font-size: 13px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.examples-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.example-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ex-bullet-audio {
+  color: var(--accent-color);
+  margin-right: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(6, 182, 212, 0.1);
+  transition: all 0.2s ease;
+  vertical-align: middle;
+}
+
+.ex-bullet-audio:hover {
+  background: var(--accent-color);
+  color: #ffffff;
+  transform: scale(1.15);
+}
+
+.ex-en {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.ex-zh {
+  font-size: 14px;
+  color: var(--text-muted);
+  padding-left: 34px;
+}
+
+.audio-buttons-row {
+  display: flex;
+  gap: 10px;
+}
 </style>
+

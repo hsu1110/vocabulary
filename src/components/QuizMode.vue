@@ -18,24 +18,48 @@
           </el-radio-group>
         </el-form-item>
 
-        <!-- 2. Show Cascader if Chapter range is selected -->
+        <!-- 2. Show Range selectors if Chapter range is selected -->
         <el-form-item v-if="rangeType === 'chapter'" label="請選擇章節">
-          <el-cascader
-            v-model="selectedRange"
-            :options="cascaderOptions"
-            :props="{ expandTrigger: 'hover' }"
-            placeholder="請選擇 Part / 章節"
-            style="width: 100%;"
-          />
+          <div class="quiz-range-selects">
+            <el-select
+              v-model="selectedPartId"
+              placeholder="請選擇 Part"
+              style="flex: 1;"
+              @change="handlePartSelectChange"
+            >
+              <el-option
+                v-for="p in vocabularyData"
+                :key="p.part_id"
+                :value="p.part_id"
+                :label="p.part_name"
+              />
+            </el-select>
+
+            <el-select
+              v-model="selectedChapterName"
+              :disabled="!selectedPartId"
+              placeholder="請選擇章節"
+              style="flex: 1;"
+              @change="handleChapterSelectChange"
+            >
+              <el-option
+                v-for="ch in availableChapters"
+                :key="ch"
+                :value="ch"
+                :label="ch"
+              />
+            </el-select>
+          </div>
         </el-form-item>
 
         <!-- 3. Question Count -->
         <el-form-item label="2. 選擇測驗題數">
           <el-input-number
             v-model="questionCount"
-            :min="5"
+            :min="availableWordsList.length > 0 ? 1 : 0"
             :max="maxAvailableQuestions"
-            :step="5"
+            :disabled="availableWordsList.length === 0"
+            :step="availableWordsList.length >= 5 ? 5 : 1"
             controls-position="right"
             style="width: 150px;"
           />
@@ -135,7 +159,9 @@
       <!-- Wrong Words Summary -->
       <div v-if="wrongAnswers.length" class="wrong-summary">
         <h4 class="summary-title text-danger">答錯單字清單 (已自動記入錯字本)：</h4>
-        <el-table :data="wrongAnswers" style="width: 100%; border-radius: 8px;">
+        
+        <!-- 電腦版：使用 Table 表格 -->
+        <el-table :data="wrongAnswers" class="desktop-only" style="width: 100%; border-radius: 8px;">
           <el-table-column prop="word" label="單字" width="150">
             <template #default="scope">
               <span class="wrong-word-link" @click="speakWord(scope.row.word)">
@@ -150,7 +176,31 @@
             </template>
           </el-table-column>
         </el-table>
+
+        <!-- 手機版：使用精緻的清單字卡，防止排版溢出且更易閱讀 -->
+        <div class="mobile-only wrong-cards-list" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+          <div
+            v-for="(w, idx) in wrongAnswers"
+            :key="idx"
+            class="wrong-word-card glass-container"
+            style="padding: 16px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.25); background: rgba(239, 68, 68, 0.04); display: flex; flex-direction: column; gap: 8px; text-align: left;"
+          >
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="wrong-word-link" style="font-size: 16px; font-weight: 700; color: var(--text-primary);" @click="speakWord(w.word)">
+                {{ w.word }} <el-icon style="font-size: 14px; margin-left: 4px;"><Headset /></el-icon>
+              </span>
+              <el-tag type="danger" size="small" effect="dark" style="border-radius: 6px;">答錯</el-tag>
+            </div>
+            <div style="font-size: 13.5px; color: var(--text-primary); line-height: 1.4;">
+              <span style="color: var(--text-muted); font-weight: 600;">正確釋義：</span>{{ w.definition }}
+            </div>
+            <div style="font-size: 13.5px; color: #fca5a5; line-height: 1.4;">
+              <span style="color: var(--text-muted); font-weight: 600;">您的回答：</span>{{ w.yourAnswer }}
+            </div>
+          </div>
+        </div>
       </div>
+      
       <div v-else class="perfect-score text-success">
         <el-icon size="40"><Trophy /></el-icon>
         <h4>太棒了！全部答對！</h4>
@@ -170,7 +220,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { Postcard, Headset, ArrowRight, Trophy } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
@@ -190,6 +240,44 @@ const quizState = ref('setup')
 const rangeType = ref('all') // 'all', 'chapter', 'wrong'
 const selectedRange = ref([]) // [part_id, chapter_name]
 const questionCount = ref(20)
+
+const selectedPartId = ref('')
+const selectedChapterName = ref('')
+
+// Initialize and watch selectedRange to sync with selectedPartId and selectedChapterName
+watch(selectedRange, (newRange) => {
+  if (newRange && newRange.length === 2) {
+    selectedPartId.value = newRange[0]
+    selectedChapterName.value = newRange[1]
+  } else {
+    selectedPartId.value = ''
+    selectedChapterName.value = ''
+  }
+}, { immediate: true })
+
+// Chapter options based on selectedPartId
+const availableChapters = computed(() => {
+  if (!selectedPartId.value) return []
+  const part = props.vocabularyData.find(p => p.part_id === selectedPartId.value)
+  return part ? part.chapters.map(c => c.chapter_name) : []
+})
+
+// Handlers for manual selection change in mobile dropdowns
+const handlePartSelectChange = (val) => {
+  selectedPartId.value = val
+  const part = props.vocabularyData.find(p => p.part_id === val)
+  if (part && part.chapters.length > 0) {
+    selectedChapterName.value = part.chapters[0].chapter_name
+    selectedRange.value = [val, selectedChapterName.value]
+  }
+}
+
+const handleChapterSelectChange = (val) => {
+  selectedChapterName.value = val
+  if (selectedPartId.value && val) {
+    selectedRange.value = [selectedPartId.value, val]
+  }
+}
 
 // Quiz Active State
 const questions = ref([])
@@ -246,17 +334,30 @@ const availableWordsList = computed(() => {
 })
 
 const maxAvailableQuestions = computed(() => {
-  return Math.max(5, availableWordsList.value.length)
+  return availableWordsList.value.length
 })
+
+watch(availableWordsList, (newList) => {
+  if (newList && newList.length > 0) {
+    if (questionCount.value > newList.length) {
+      questionCount.value = newList.length
+    }
+    if (questionCount.value < 1) {
+      questionCount.value = Math.min(5, newList.length)
+    }
+  } else {
+    questionCount.value = 0
+  }
+}, { immediate: true })
 
 const isSetupValid = computed(() => {
   if (rangeType.value === 'chapter') {
-    return selectedRange.value.length === 2
+    return selectedRange.value.length === 2 && availableWordsList.value.length > 0
   }
   if (rangeType.value === 'wrong') {
-    return hasWrongWords.value
+    return hasWrongWords.value && availableWordsList.value.length > 0
   }
-  return true
+  return availableWordsList.value.length > 0
 })
 
 // Current question data
@@ -292,8 +393,8 @@ const shuffle = (array) => {
 // Start the Quiz
 const startQuiz = () => {
   const pool = availableWordsList.value
-  if (pool.length < 5) {
-    ElMessage.error('測驗範圍內單字數量太少（少於 5 個），無法開始小考。')
+  if (pool.length < 1) {
+    ElMessage.error('測驗範圍內沒有單字，無法開始小考。')
     return
   }
   
@@ -497,7 +598,7 @@ onMounted(() => {
   padding: 32px;
   background:
     linear-gradient(rgba(22, 28, 45, 0.55), rgba(22, 28, 45, 0.55)),
-    url('/exam.jpg') center 12% / cover no-repeat;
+    url('/exam.jpg') center 100% / 60% 90% no-repeat fixed;
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
   border: 1px solid var(--border-color);
@@ -598,13 +699,19 @@ onMounted(() => {
 }
 
 .option-label {
-  display: inline-block;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 2px 8px;
-  border-radius: 6px;
-  margin-right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: var(--text-muted) !important;
   font-weight: 700;
-  color: var(--text-muted);
+  margin-right: 14px;
+  flex-shrink: 0;
+  line-height: 1 !important;
 }
 
 .option-text {
@@ -622,15 +729,13 @@ onMounted(() => {
   padding: 0 28px !important;
 }
 
-/* 結果頁面：同樣用 exam.jpg 裝飾背景 */
+/* 結果頁面：不使用背景圖以求畫面乾淨與一致 */
 .result-page {
   position: relative;
   overflow: hidden;
   padding: 40px 32px;
   text-align: center;
-  background:
-    linear-gradient(rgba(22, 28, 45, 0.45), rgba(22, 28, 45, 0.45)),
-    url('/exam.jpg') top center / cover no-repeat;
+  background: linear-gradient(135deg, rgba(22, 28, 45, 0.75) 0%, rgba(15, 23, 42, 0.9) 100%);
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
   border: 1px solid var(--border-color);
@@ -729,6 +834,65 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   gap: 16px;
+}
+
+.quiz-range-selects {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  .quiz-range-selects {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .setup-panel {
+    padding: 20px 16px !important;
+    border-radius: 16px !important;
+    background:
+      linear-gradient(rgba(22, 28, 45, 0.55), rgba(22, 28, 45, 0.55)),
+      url('/exam.jpg') 20% 35% / 240% 100% no-repeat fixed !important;
+  }
+  
+  .setup-title {
+    font-size: 18px !important;
+    margin-bottom: 16px !important;
+  }
+  
+  .result-page {
+    padding: 24px 16px !important;
+    border-radius: 16px !important;
+  }
+  
+  .result-score-circle {
+    width: 100px !important;
+    height: 100px !important;
+  }
+  
+  .score-number {
+    font-size: 28px !important;
+  }
+  
+  .result-actions {
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+  
+  .result-actions .el-button {
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+
+  .quiz-footer {
+    width: 100% !important;
+  }
+
+  .quiz-footer .next-btn {
+    width: 100% !important;
+  }
 }
 </style>
 
