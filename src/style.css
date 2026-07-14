@@ -188,21 +188,29 @@ body {
 }
 
 .header-nav .el-menu-item.is-active {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(6, 182, 212, 0.12) 100%) !important;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.18) 0%,
+    rgba(6, 182, 212, 0.12) 100%
+  ) !important;
   color: #a5b4fc !important;
   border: 1px solid rgba(99, 102, 241, 0.4) !important;
-  box-shadow: 
+  box-shadow:
     0 0 15px rgba(99, 102, 241, 0.25),
     inset 0 0 8px rgba(99, 102, 241, 0.1) !important;
 }
 
 .header-nav .el-menu-item.is-active:hover {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.24) 0%, rgba(6, 182, 212, 0.18) 100%) !important;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.24) 0%,
+    rgba(6, 182, 212, 0.18) 100%
+  ) !important;
   border-color: rgba(99, 102, 241, 0.6) !important;
 }
 
 /* 確保 hover 及 active 的底層底線不會出現 */
-.header-nav .el-menu--horizontal>.el-menu-item.is-active {
+.header-nav .el-menu--horizontal > .el-menu-item.is-active {
   border-bottom: none !important;
 }
 
@@ -900,4 +908,3 @@ body {
 .el-select__caret {
   color: var(--text-muted) !important;
 }
-
