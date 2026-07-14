@@ -33,9 +33,12 @@
         <el-table :data="wrongWordsDetails" style="width: 100%; background: transparent;">
           <el-table-column prop="word" label="單字" width="160">
             <template #default="scope">
-              <span class="word-text" @click="speakText(scope.row.word)">
-                {{ scope.row.word }} <el-icon><Headset /></el-icon>
-              </span>
+              <div class="word-cell">
+                <span class="word-text-label">{{ scope.row.word }}</span>
+                <span class="ex-bullet-audio" @click.stop="speakText(scope.row.word)" title="播放發音">
+                  <el-icon><Headset /></el-icon>
+                </span>
+              </div>
             </template>
           </el-table-column>
           <el-table-column prop="phonetic" label="音標" width="160" />
@@ -90,9 +93,12 @@
           class="mobile-word-card glow-card"
         >
           <div class="mobile-word-title">
-            <span @click="speakText(item.word)" style="cursor: pointer;">
-              {{ item.word }} <el-icon style="margin-left: 4px; vertical-align: middle;"><Headset /></el-icon>
-            </span>
+            <div class="mobile-word-title-inner">
+              <span>{{ item.word }}</span>
+              <span class="ex-bullet-audio" @click.stop="speakText(item.word)" title="播放發音">
+                <el-icon><Headset /></el-icon>
+              </span>
+            </div>
             <el-button
               class="btn-success-glass"
               size="small"
@@ -168,6 +174,14 @@
                   {{ currentWordIndex + 1 }} / {{ wrongWordsDetails.length }}
                 </span>
               </div>
+              <!-- 單字發音按鈕移入上半卡片 -->
+              <el-button
+                class="btn-accent-glass card-speak-btn"
+                :icon="Headset"
+                @click.stop="speakText(currentWord.word)"
+              >
+                單字發音
+              </el-button>
             </div>
 
             <!-- Body -->
@@ -222,27 +236,20 @@
             </div>
           </div>
 
-          <!-- Examples & Audio Pronunciation Panel (Unified style with StudyMode) -->
+          <!-- Examples & Audio Pronunciation Panel -->
           <div class="examples-panel glass-container">
             <div class="panel-header">
               <div class="word-header-info">
                 <span class="word-name">{{ currentWord.word }}</span>
                 <span class="word-index-tag">進度: {{ currentWordIndex + 1 }} / {{ wrongWordsDetails.length }}</span>
               </div>
-              <!-- Audio TTS Buttons -->
+              <!-- 例句發音按鈕 -->
               <div class="audio-buttons-row">
-                <el-button
-                  class="btn-accent-glass"
-                  :icon="Headset"
-                  @click.stop="speakText(currentWord.word)"
-                >
-                  單字發音
-                </el-button>
                 <el-button
                   v-if="currentWord.examples && currentWord.examples.length"
                   class="btn-secondary-glass"
                   :icon="VideoPlay"
-                  @click.stop="speakText(currentWord.examples.map(ex => ex.en).join(' '))"
+                  @click.stop="speakText(currentWord.examples.map(ex => ex.en).join('. '))"
                 >
                   例句發音
                 </el-button>
@@ -252,12 +259,7 @@
             <!-- Examples List -->
             <div v-if="currentWord.examples && currentWord.examples.length" class="examples-list">
               <div v-for="(ex, idx) in currentWord.examples" :key="idx" class="example-item">
-                <div class="ex-en" style="display: flex; align-items: flex-start;">
-                  <span class="ex-bullet-audio" @click.stop="speakText(ex.en)" title="播放此例句">
-                    <el-icon><VideoPlay /></el-icon>
-                  </span>
-                  <span class="ex-text" @click.stop="speakText(ex.en)" title="播放此例句" style="cursor: pointer; flex: 1;">{{ ex.en }}</span>
-                </div>
+                <div class="ex-en">{{ ex.en }}</div>
                 <div class="ex-zh">{{ ex.zh }}</div>
               </div>
             </div>
@@ -590,16 +592,27 @@ onUnmounted(() => {
   padding: 12px;
 }
 
-.word-text {
-  font-weight: 700;
-  cursor: pointer;
+/* 清單列表單字欄位容器 */
+.word-cell {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
 }
 
-.word-text:hover {
-  color: var(--primary-color);
+.word-text-label {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* 手機清單標題行（單字文字 + 發音按鈕） */
+.mobile-word-title-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
 }
 
 /* Cards Review Mode styling */
@@ -623,24 +636,16 @@ onUnmounted(() => {
 
 .card-header-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 12px;
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 16px;
-  position: relative;
 }
 
-.card-badge {
-  position: absolute;
-  top: 0px;
-  right: 0px;
-  font-size: 12px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  padding: 4px 10px;
-  border-radius: 12px;
-  color: var(--danger);
+/* 發音按鈕靠右貼齊卡片邊緣 */
+.card-speak-btn {
+  margin-left: auto;
 }
 
 .card-word-title {

@@ -124,6 +124,14 @@
               <div v-if="currentWord.structure" class="card-word-structure">
                 {{ currentWord.structure }}
               </div>
+              <!-- 單字發音按鈕移入上半卡片 -->
+              <el-button
+                class="btn-accent-glass card-speak-btn"
+                :icon="Headset"
+                @click.stop="speakText(currentWord.word)"
+              >
+                單字發音
+              </el-button>
             </div>
 
             <div class="card-body-section">
@@ -186,20 +194,13 @@
                 <span class="word-name">{{ currentWord.word }}</span>
                 <span class="word-index-tag">進度: {{ currentWordIndex + 1 }} / {{ currentWords.length }}</span>
               </div>
-              <!-- Audio TTS Button -->
+              <!-- 例句發音按鈕 -->
               <div class="audio-buttons-row">
-                <el-button
-                  class="btn-accent-glass"
-                  :icon="Headset"
-                  @click.stop="speakText(currentWord.word)"
-                >
-                  單字發音
-                </el-button>
                 <el-button
                   v-if="currentWord.examples && currentWord.examples.length"
                   class="btn-secondary-glass"
                   :icon="VideoPlay"
-                  @click.stop="speakText(currentWord.examples.map(ex => ex.en).join(' '))"
+                  @click.stop="speakText(currentWord.examples.map(ex => ex.en).join('. '))"
                 >
                   例句發音
                 </el-button>
@@ -209,12 +210,7 @@
             <!-- Examples List -->
             <div v-if="currentWord.examples && currentWord.examples.length" class="examples-list">
               <div v-for="(ex, idx) in currentWord.examples" :key="idx" class="example-item">
-                <div class="ex-en" style="display: flex; align-items: flex-start;">
-                  <span class="ex-bullet-audio" @click.stop="speakText(ex.en)" title="播放此例句">
-                    <el-icon><VideoPlay /></el-icon>
-                  </span>
-                  <span class="ex-text" @click.stop="speakText(ex.en)" title="播放此例句" style="cursor: pointer; flex: 1;">{{ ex.en }}</span>
-                </div>
+                <div class="ex-en">{{ ex.en }}</div>
                 <div class="ex-zh">{{ ex.zh }}</div>
               </div>
             </div>
@@ -547,11 +543,16 @@ watch(() => currentWordIndex.value, () => {
 
 .card-header-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 12px;
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 16px;
+}
+
+/* 發音按鈕靠右貼齊卡片邊緣 */
+.card-speak-btn {
+  margin-left: auto;
 }
 
 .card-word-title {
