@@ -3,9 +3,9 @@
     <!-- Header / Nav Bar (電腦版) -->
     <header class="header-nav glass-container desktop-only">
       <div class="brand-title">
-        <img src="/gua1.png" class="brand-avatar" alt="gua1" />
+        <img src="./assets/gua1.png" class="brand-avatar" alt="gua1" />
         <span>張晨晨考試加油！</span>
-        <img src="/gua2.png" class="brand-avatar" alt="gua3" />
+        <img src="./assets/gua2.png" class="brand-avatar" alt="gua3" />
       </div>
 
       <!-- Menu Navigation -->
@@ -41,9 +41,9 @@
     <!-- Header (手機版：僅保留頂部 Logo 精簡列) -->
     <header class="header-nav-mobile glass-container mobile-only">
       <div class="brand-title-mobile">
-        <img src="/gua1.png" class="brand-avatar-mobile" alt="gua1" />
+        <img src="./assets/gua1.png" class="brand-avatar-mobile" alt="gua1" />
         <span>晨晨考試加油！</span>
-        <img src="/gua2.png" class="brand-avatar-mobile" alt="gua2" />
+        <img src="./assets/gua2.png" class="brand-avatar-mobile" alt="gua2" />
       </div>
     </header>
 

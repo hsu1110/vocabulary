@@ -630,7 +630,7 @@ watch(() => currentQuestionIdx.value, () => {
       rgba(11, 15, 25, 0.45) 20%,
       rgba(11, 15, 25, 0.05) 100%
     ),
-    url('/exam.jpg') center top / cover no-repeat;
+    url('../assets/exam.jpg') center top / cover no-repeat;
   border: 1px solid var(--border-color);
   border-radius: 20px;
   box-shadow: var(--shadow-main), 0 0 25px rgba(99, 102, 241, 0.1);
@@ -941,7 +941,7 @@ watch(() => currentQuestionIdx.value, () => {
     border-radius: 16px !important;
     background:
       linear-gradient(rgba(22, 28, 45, 0.55), rgba(22, 28, 45, 0.55)),
-      url('/exam.jpg') 20% 35% / 240% 100% no-repeat fixed !important;
+      url('../assets/exam.jpg') 20% 35% / 240% 100% no-repeat fixed !important;
   }
   
   .setup-title {
