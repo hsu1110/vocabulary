@@ -49,8 +49,8 @@
   --el-bg-color: #0b0f19 !important;
   --el-bg-color-overlay: #161c2d !important;
   --el-border-color: rgba(255, 255, 255, 0.08) !important;
+  
   --el-border-color-light: rgba(255, 255, 255, 0.05) !important;
-
   --el-text-color-primary: #f8fafc !important;
   --el-text-color-regular: #94a3b8 !important;
   --el-text-color-placeholder: rgba(255, 255, 255, 0.35) !important;
@@ -164,7 +164,7 @@ body {
   margin: 0 6px !important;
   border-radius: 20px !important;
   border: 1px solid transparent !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s !important;
   background: transparent !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -209,8 +209,8 @@ body {
   border-color: rgba(99, 102, 241, 0.6) !important;
 }
 
-/* 確保 hover 及 active 的底層底線不會出現 */
-.header-nav .el-menu--horizontal > .el-menu-item.is-active {
+/* 確保所有狀態下的底層底線都不會出現 */
+.header-nav .el-menu--horizontal > .el-menu-item {
   border-bottom: none !important;
 }
 

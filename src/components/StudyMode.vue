@@ -71,46 +71,13 @@
 
     <!-- Study Cards Interface -->
     <div v-else class="cards-layout">
-      <!-- Wrap the main card content and examples panel in transition -->
+      <!-- 移除了 isLoading 判斷與骨架屏，直接以單字 ID 作為 Key，驅動流暢的過渡動畫 -->
       <transition name="fade-slide" mode="out-in">
-        <!-- 1. Skeleton Screen when loading -->
-        <div v-if="isLoading" class="skeleton-layout" style="width: 100%; display: flex; flex-direction: column; gap: 20px;">
-          <!-- Skeleton Card -->
-          <div class="word-info-card glow-card" style="padding: 32px; min-height: 320px; display: flex; flex-direction: column; gap: 24px;">
-            <div class="card-header-row" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px;">
-              <div class="skeleton-pulse skeleton-title" style="margin-bottom: 0; height: 32px; width: 140px;"></div>
-              <div class="skeleton-pulse skeleton-phonetic" style="margin-bottom: 0; width: 100px; height: 24px;"></div>
-            </div>
-            <div class="card-body-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-              <div>
-                <div class="skeleton-pulse" style="width: 60px; height: 12px; margin-bottom: 12px;"></div>
-                <div class="skeleton-pulse" style="height: 60px; width: 100%;"></div>
-              </div>
-              <div>
-                <div class="skeleton-pulse" style="width: 60px; height: 12px; margin-bottom: 12px;"></div>
-                <div class="skeleton-pulse" style="height: 60px; width: 100%;"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Skeleton Examples Panel -->
-          <div class="examples-panel glass-container" style="padding: 24px; min-height: 180px; display: flex; flex-direction: column; gap: 16px;">
-            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px;">
-              <div class="skeleton-pulse" style="width: 120px; height: 24px; margin: 0;"></div>
-              <div style="display: flex; gap: 8px;">
-                <div class="skeleton-pulse" style="width: 90px; height: 32px; border-radius: 8px;"></div>
-                <div class="skeleton-pulse" style="width: 90px; height: 32px; border-radius: 8px;"></div>
-              </div>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
-              <div class="skeleton-pulse" style="height: 20px; width: 90%;"></div>
-              <div class="skeleton-pulse" style="height: 16px; width: 60%;"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 2. Actual Content when loaded -->
-        <div v-else class="content-wrapper-layout" style="width: 100%; display: flex; flex-direction: column; gap: 20px;">
+        <div 
+          :key="currentWord.id" 
+          class="content-wrapper-layout" 
+          style="width: 100%; display: flex; flex-direction: column; gap: 20px;"
+        >
           <!-- Word Card (Unified, no flip) -->
           <div 
             class="word-info-card glow-card swipe-transition"
@@ -263,7 +230,6 @@ const currentWordIndex = ref(0)
 // Two separate selects helper for mobile
 const selectedPartId = ref('')
 const selectedChapterName = ref('')
-const isLoading = ref(false)
 
 // Initialize and watch selectedRange to sync with selectedPartId and selectedChapterName
 watch(selectedRange, (newRange) => {
@@ -341,14 +307,18 @@ const allWordsFlat = computed(() => {
 
 const handleSearchChange = (item) => {
   if (!item) return
-  selectedRange.value = [item.partId, item.chapterName]
-  setTimeout(() => {
-    const idx = currentWords.value.findIndex(w => w.id === item.id)
-    if (idx !== -1) {
-      currentWordIndex.value = idx
-      saveProgress()
+  const part = props.vocabularyData.find(p => p.part_id === item.partId)
+  if (part) {
+    const chapter = part.chapters.find(c => c.chapter_name === item.chapterName)
+    if (chapter) {
+      const idx = chapter.words.findIndex(w => w.id === item.id)
+      if (idx !== -1) {
+        selectedRange.value = [item.partId, item.chapterName]
+        currentWordIndex.value = idx
+        saveProgress()
+      }
     }
-  }, 50)
+  }
 }
 
 
@@ -369,15 +339,7 @@ const currentWord = computed(() => {
   return currentWords.value[currentWordIndex.value]
 })
 
-// Watch currentWord changes to trigger automatic loading animation
-watch(() => currentWord.value, (newWord) => {
-  if (newWord && newWord.word) {
-    isLoading.value = true
-    setTimeout(() => {
-      isLoading.value = false
-    }, 200)
-  }
-})
+
 
 // Reset word index
 const handleRangeChange = () => {
@@ -469,6 +431,14 @@ const handleSwipe = () => {
 
 const handleKeyboard = (event) => {
   if (currentWords.value.length === 0) return
+  const activeEl = document.activeElement
+  if (activeEl && (
+    activeEl.tagName === 'INPUT' || 
+    activeEl.tagName === 'TEXTAREA' || 
+    activeEl.isContentEditable
+  )) {
+    return
+  }
   if (event.key === 'ArrowLeft') {
     prevWord()
   } else if (event.key === 'ArrowRight') {

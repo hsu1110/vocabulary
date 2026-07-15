@@ -413,20 +413,48 @@ const setupOptions = () => {
   
   const correctWord = currentQuestion.value
   
-  // Draw distractors from all vocabulary database to ensure diversity
+  // 優先尋找同章節單字作為干擾項
+  let chapterCandidates = []
+  let partCandidates = []
   const allWords = []
-  props.vocabularyData.forEach(p => {
-    p.chapters.forEach(c => {
-      c.words.forEach(w => {
-        if (w.id !== correctWord.id && w.definition && w.definition.trim()) {
-          allWords.push(w)
-        }
-      })
-    })
-  })
   
-  const shuffledAll = shuffle(allWords)
-  const distractors = shuffledAll.slice(0, 3)
+  for (const part of props.vocabularyData) {
+    let partContainsWord = false
+    let partWords = []
+    
+    for (const chapter of part.chapters) {
+      const chapterWords = chapter.words.filter(w => w.definition && w.definition.trim())
+      const containsWord = chapterWords.some(w => w.id === correctWord.id)
+      
+      // 收集該章節中除目前單字外的其他單字
+      const otherChapterWords = chapterWords.filter(w => w.id !== correctWord.id)
+      if (containsWord) {
+        chapterCandidates = otherChapterWords
+        partContainsWord = true
+      }
+      
+      partWords.push(...otherChapterWords)
+      
+      // 同時收集全域所有單字
+      allWords.push(...otherChapterWords)
+    }
+    
+    if (partContainsWord) {
+      partCandidates = partWords
+    }
+  }
+  
+  let distractors = []
+  if (chapterCandidates.length >= 3) {
+    // 1. 同章節單字足夠，優先使用同章節
+    distractors = shuffle(chapterCandidates).slice(0, 3)
+  } else if (partCandidates.length >= 3) {
+    // 2. 同章節不夠，使用同 Part
+    distractors = shuffle(partCandidates).slice(0, 3)
+  } else {
+    // 3. 都不夠，則使用全書單字
+    distractors = shuffle(allWords).slice(0, 3)
+  }
   
   // Create option list
   const opts = [
@@ -543,6 +571,14 @@ const customColors = [
 // 答題後按 Enter 或空白鍵可快鍵前進下一題
 const handleKeyDown = (e) => {
   if (quizState.value === 'active' && hasAnswered.value) {
+    const activeEl = document.activeElement
+    if (activeEl && (
+      activeEl.tagName === 'INPUT' || 
+      activeEl.tagName === 'TEXTAREA' || 
+      activeEl.isContentEditable
+    )) {
+      return
+    }
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       nextQuestion()
@@ -560,6 +596,15 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown)
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel()
+  }
+})
+
+watch(() => currentQuestionIdx.value, () => {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel()
+  }
 })
 </script>
 

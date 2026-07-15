@@ -334,7 +334,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Warning, Headset, ArrowLeft, ArrowRight, Check, Close, VideoPlay } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useTTS } from '../composables/useTTS.js'
@@ -418,6 +418,7 @@ const removeWrongWord = (wordId) => {
   if (currentWordIndex.value >= updated.length && currentWordIndex.value > 0) {
     currentWordIndex.value = updated.length - 1
   }
+  saveReviewProgress()
 }
 
 
@@ -466,6 +467,7 @@ const rateWord = (wordId, isCorrect) => {
     const nextIdx = currentWordIndex.value + 1
     currentWordIndex.value = nextIdx < updated.length ? nextIdx : 0
   }
+  saveReviewProgress()
 }
 
 const clearAllWrong = () => {
@@ -488,16 +490,37 @@ const clearAllWrong = () => {
 // 使用共用 TTS composable
 const { speakText } = useTTS()
 
+// 進度記憶功能
+const saveReviewProgress = () => {
+  localStorage.setItem('vocabulary_review_progress', currentWordIndex.value)
+}
+
+const loadReviewProgress = () => {
+  const saved = localStorage.getItem('vocabulary_review_progress')
+  if (saved) {
+    try {
+      const idx = parseInt(saved, 10)
+      if (idx >= 0 && idx < wrongWordsDetails.value.length) {
+        currentWordIndex.value = idx
+      }
+    } catch (e) {
+      console.error('Failed to parse review progress', e)
+    }
+  }
+}
+
 // 卡片切換導覽
 const prevCard = () => {
   if (currentWordIndex.value > 0) {
     currentWordIndex.value--
+    saveReviewProgress()
   }
 }
 
 const nextCard = () => {
   if (currentWordIndex.value < wrongWordsDetails.value.length - 1) {
     currentWordIndex.value++
+    saveReviewProgress()
   }
 }
 
@@ -528,6 +551,14 @@ const handleSwipe = () => {
 
 const handleKeyDown = (e) => {
   if (viewMode.value === 'cards') {
+    const activeEl = document.activeElement
+    if (activeEl && (
+      activeEl.tagName === 'INPUT' || 
+      activeEl.tagName === 'TEXTAREA' || 
+      activeEl.isContentEditable
+    )) {
+      return
+    }
     if (e.key === 'ArrowLeft') {
       prevCard()
     } else if (e.key === 'ArrowRight') {
@@ -538,11 +569,21 @@ const handleKeyDown = (e) => {
 
 onMounted(() => {
   loadWrongWords()
+  loadReviewProgress()
   window.addEventListener('keydown', handleKeyDown)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown)
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel()
+  }
+})
+
+watch(() => currentWordIndex.value, () => {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel()
+  }
 })
 </script>
 
